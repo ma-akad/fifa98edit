@@ -2033,7 +2033,7 @@ def convoca(team_data, *lax):
 		new_squad = [int(new_squad[i:i+2],16) for i in range(0, len(new_squad), 2)]
 		return bytes(new_squad)
 	
-def show_leagues():
+def show_leagues(**kwargs):
 	lines_side = [0,0]
 	line_counter = 0
 	left_space = ''
@@ -2054,11 +2054,12 @@ def show_leagues():
 			line_counter = 0
 			left_space=''
 			if (diff:=lines_side[0] - lines_side[1]) > 0: print('\n'*diff,end='')
-	
-	if input('Rename league? [yn] ') == 'y':
-		l = int(inputPlus('\nSelect league:\n  $OPTIONLIST_d$$CANCEL$', leagues, dct=league_list, c=True, sep='\n  ')[0])
-		if l < len(leagues): edit_leagues(league_list[l])
-	elif input('Transfer team? [yn] ') == 'y':
+
+	if not kwargs.get('transfers',False):
+		if input('Rename league? [yn] ') == 'y':
+			l = int(inputPlus('\nSelect league:\n  $OPTIONLIST_d$$CANCEL$', leagues, dct=league_list, c=True, sep='\n  ')[0])
+			if l < len(leagues): edit_leagues(league_list[l])
+	if kwargs.get('transfers',False) or input('Transfer team? [yn] ') == 'y':
 		l = int(inputPlus('\nSelect source league:\n  $OPTIONLIST_d$$CANCEL$', leagues, dct=league_list, c=True, sep='\n  ')[0])
 		if l < len(leagues):
 			tms = [(team['names'][-1], team['index_fcdb']) for (e,team) in enumerate(sorted(teams, key=lambda x: x['names'][-1])) if team['league'] == l]
@@ -2098,7 +2099,7 @@ def show_leagues():
 						edit_team(sw_name[0], field="n", value = sw_name[1]['names'])
 						edit_team(sw_name[1], field="n", value = sw_name[0]['names'])
 						print('\r\033[K\n%s transferred to %s, %s transferred to %s'%(sw_name[0]['names'][-1],league_list[dl],sw_name[1]['names'][-1],league_list[l]))
-						if input('\nKeep working on leagues? [yn] ') == 'y': show_leagues()
+						if input('\nKeep working on leagues? [yn] ') == 'y': show_leagues(transfers=True)
 
 def edit_leagues(target):
 	tmpfl = b''
