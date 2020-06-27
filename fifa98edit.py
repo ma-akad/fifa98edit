@@ -2209,7 +2209,7 @@ def restore():
 def match_day():
 	def nt_lineup(squad, tactics, player):
 		reparti = tactics.split('-')
-		if len(reparti) == 4: reparti = [reparti[0]+reparti[1], reparti[2], reparti[3]]
+		if len(reparti) == 4: reparti = [int(reparti[0])+int(reparti[1]), reparti[2], reparti[3]]
 		reparti = [int(_) for _ in reparti]
 		lineup = [[],[],[],[]]
 		rls = dict(GK=0,CB=1,RB=1,LB=1,SW=1,CM=2,RM=2,LM=2,CF=3,RF=3,LF=3)
@@ -2277,8 +2277,9 @@ def match_day():
 			teams1['P'].append(x['role'])
 			teams1['Nat'].append(eval(in2))
 			teams1['AV'].append(x['average'])
-			teams1['St'].append(x['starting'])
 			teams1['Role'].append(dict(GK=0,CB=2,RB=1,LB=3,SW=2,CM=5,RM=4,LM=6,CF=8,RF=7,LF=9)[x['role']])
+			if l2 < 11: teams1['St'].append(x['starting'])
+			else: teams1['St'].append(nt_lineup(t2sq, t2ta, x['id']))
 	table = pd.DataFrame(data = teams0)
 	table = table.sort_values(by=['St','Role'])
 	table = table[['N', 'Name','P','Nat','AV']]
