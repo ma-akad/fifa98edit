@@ -89,16 +89,16 @@ if platform.system() == 'Windows':
 		'\033[91;40m▒▒',
 		'\033[91;43m▒▒',
 		'\033[31;43m▒▒',
-		'\033[30;43m▓▓',
-		'\033[103m  ',
+		'\033[33;41m▒▒',
+		'\033[33;103m▒▒',
 		'\033[97;43m▒▒',
 		'\033[43m  ',
 		'\033[102m  ',
 		'\033[42m  ',
 		'\033[34;42m▒▒',
-		'\033[106m  ',
 		'\033[104m  ',
 		'\033[44m  ',
+		'\033[30;44m▒▒',
 		'\033[34;40m▒▒',
 		'\033[105;97m▒▒',
 		'\033[105m  ',
@@ -114,29 +114,29 @@ else:
 	clear_screen = "clear && printf '\e[3J'"
 	unix = './'
 	cesc = [
-		'\033[48;5;219m  ',
-		'\033[48;5;196m  ',
-		'\033[48;5;88m  ',
-		'\033[48;5;214m  ',
-		'\033[48;5;208m  ' ,
+		'\033[48;5;204m  ',
+		'\033[48;5;124m  ',
 		'\033[48;5;52m  ',
-		'\033[48;5;11m  ',
+		'\033[48;5;208m  ',
+		'\033[48;5;202m  ' ,
+		'\033[48;5;1m  ',
 		'\033[48;5;220m  ',
+		'\033[48;5;214m  ',
 		'\033[48;5;136m  ',
-		'\033[48;5;118m  ',
-		'\033[48;5;2m  ',
+		'\033[48;5;76m  ',
+		'\033[48;5;28m  ',
 		'\033[48;5;22m  ',
-		'\033[48;5;14m  ',
 		'\033[48;5;32m  ',
-		'\033[48;5;20m  ',
+		'\033[48;5;25m  ',
+		'\033[48;5;19m  ',
 		'\033[48;5;18m  ',
-		'\033[48;5;105m  ',
+		'\033[48;5;134m  ',
 		'\033[48;5;91m  ',
 		'\033[48;5;56m  ',
 		'\033[48;5;15m  ',
-		'\033[48;5;7m  ',
-		'\033[48;5;8m  ',
-		'\033[48;5;0m  '
+		'\033[48;5;249m  ',
+		'\033[48;5;241m  ',
+		'\033[48;5;237m  '
 	]
 	hair_cl_d = {'blond':'\033[48;5;11m  \033[0m','brown':'\033[48;5;52m  \033[0m','red':'\033[48;5;208m  \033[0m','BLack':'\033[48;5;0m  \033[0m'}
 	skin_cl_d = ['\033[48;5;224m  \033[0m','\033[48;5;223m  \033[0m','\033[48;5;130m  \033[0m','\033[48;5;52m  \033[0m']
@@ -2040,8 +2040,9 @@ def show_leagues(**kwargs):
 	for e,_ in enumerate([league_list.index(x) for x in sorted(league_list[:11])]):
 		print(left_space+'{:#^40}'.format(' %s '%league_list[_].upper())); line_counter += 1
 		print(left_space+'|%s|'%(38*" ")); line_counter += 1
-		for t in leagues[_]:
-			print(left_space+'|{: ^38}|'.format(teams[t]['names'][-1])); line_counter += 1
+		tnlist = sorted([teams[t]['names'][-1] for t in leagues[_]])
+		for t in tnlist:
+			print(left_space+'|{: ^38}|'.format(t)); line_counter += 1
 		print(left_space+'|%s|'%(38*" ")); line_counter += 1
 		print(left_space+'#'*40,'\n'); line_counter += 1
 		if e % 2 == 0 and e < 10:
@@ -2058,7 +2059,7 @@ def show_leagues(**kwargs):
 	if not kwargs.get('transfers',False):
 		if input('Rename league? [yn] ') == 'y':
 			l = int(inputPlus('\nSelect league:\n  $OPTIONLIST_d$$CANCEL$', leagues, dct=league_list, c=True, sep='\n  ')[0])
-			if l < len(leagues): edit_leagues(league_list[l])
+			if l < len(leagues): edit_leagues(l)
 	if kwargs.get('transfers',False) or input('Transfer team? [yn] ') == 'y':
 		l = int(inputPlus('\nSelect source league:\n  $OPTIONLIST_d$$CANCEL$', leagues, dct=league_list, c=True, sep='\n  ')[0])
 		if l < len(leagues):
@@ -2124,12 +2125,13 @@ def edit_leagues(target):
 	league_list = []
 	string = b''
 	skip = False
+	lgidx = 0
 	while True:
 		new_char = squadre.read(1)
 		lglist += new_char
 		if new_char == b'\x00':
 			zerocount +=1
-			if skip == False and string.decode('unicode-escape') == target:
+			if skip == False and lgidx == target:
 				new_string = bytes(input('Change "%s" ?: '%string.decode('unicode-escape')), 'iso-8859-1')
 				if len(new_string) > 0:
 					if new_string == b'*':
@@ -2146,6 +2148,7 @@ def edit_leagues(target):
 						del new_string
 			league_list.append(string)
 			string = b''
+			lgidx += 1
 		else:
 			string += new_char
 		if zerocount == how_many:
@@ -2185,7 +2188,6 @@ def edit_leagues(target):
 	output.write(tmpfl)
 	output.close()
 	load_database()
-	print('All done')
 	
 
 def commit():
