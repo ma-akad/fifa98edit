@@ -1831,8 +1831,8 @@ Parameter to edit:
 			if new_value is None:
 				print('\n%s'%' '.join(['%s\033[0m [%s] %s'%(cesc[e],e,f) for e,f in enumerate(colours)]))
 				new_value = [
-					int((lambda x: x if (y:=int(inputPlus('Change first colour (enter to confirm: "%s")?'%colours[x], colours, entC=True)[0])) == len(colours) else y)(vals_already[kit[1]+' shorts - colour 1'])),
-					int((lambda x: x if (y:=int(inputPlus('Change second colour (enter to confirm: "%s")?'%colours[x], colours, entC=True)[0])) == len(colours) else y)(vals_already[kit[1]+' shorts - colour 2']))
+					int((lambda x: x if (y:=int(inputPlus('Change first colour (enter to confirm: "%s")?'%colours[x], colours, entC=True)[0])) == len(colours) else y)(vals_already[kit[1]+' socks - colour 1'])),
+					int((lambda x: x if (y:=int(inputPlus('Change second colour (enter to confirm: "%s")?'%colours[x], colours, entC=True)[0])) == len(colours) else y)(vals_already[kit[1]+' socks - colour 2']))
 				]
 			temp_bytes[8+kit[0]] = bytes([(int.from_bytes(temp_bytes[8+kit[0]], 'big') & 31) + ((new_value[0] & 7) << 5)])
 			temp_bytes[9+kit[0]] = bytes([(int.from_bytes(temp_bytes[9+kit[0]], 'big') & 252) + ((new_value[0] & 24) >> 3)])
