@@ -3191,6 +3191,11 @@ club team (if any) and nationality. If players are capped for a national team, a
 is displayed next to their nation.
 
 ""","""
+\033[31C------ EXPORT DATABASE AS JSON FILE------
+
+Dumps the whole database to the JSON file "complete_db.json" in the script folder.
+
+""","""
 \033[38C------ DEBUG MODE ------
 
 Automatic checks for:
