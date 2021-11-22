@@ -168,6 +168,7 @@ leagues = {
 	10: [180, 347, 185, 187, 189, 346, 348, 182, 181, 186, 183, 190, 188, 184],
 }
 league_teams = reduce(lambda x,y: x + y[1], leagues.items(), [])
+nat_groups = {17: [45, 330, 311, 305, 317, 306, 26, 318, 307, 327, 31, 312, 328, 322, 308, 323, 314, 202, 309, 315, 316, 329, 331, 332, 18, 196, 21, 333, 310, 324, 321, 325, 313, 319, 326, 320], 42: [42, 30, 49, 20, 63, 263, 265, 267, 269, 281, 270, 272, 193, 275, 276, 262, 273, 277, 279, 266, 280, 34, 282, 283, 37, 284, 285, 268, 287, 271, 274, 286, 199, 264, 192, 278], 38: [43, 33, 345, 241, 243, 237, 248, 256, 249, 250, 195, 251, 242, 244, 260, 239, 258, 240, 247, 261, 252, 245, 259, 257, 255, 238, 246, 254, 253, 201], 12: [64, 39, 40, 44, 46, 342, 343, 12, 8, 344], 13: [65, 36, 337, 341, 334, 335, 340, 338, 336, 339], 28: [303, 304, 66, 291, 292, 38, 288, 41, 191, 295, 47, 48, 50, 293, 296, 51, 52, 289, 53, 25, 27, 194, 28, 15, 29, 294, 301, 200, 32, 302, 297, 290, 35, 10, 11, 13, 14, 16, 17, 300, 19, 298, 208, 22, 23, 24, 6, 7, 9, 299]}
 
 tactics = [
 	'5-4-1',
@@ -512,7 +513,9 @@ def load_database(**args):
 			teams[sq_itr]['strategy'] = strategia[int.from_bytes(squad[17:18], 'big') >> 5]
 			teams[sq_itr]['tactics'] = tactics[int.from_bytes(squad[21:22], 'big') >> 2]
 			teams[sq_itr]['roster size'] = (int.from_bytes(squad[22:23], 'big') & 15) * 2
-			teams[sq_itr]['league'] = len(leagues)
+			for nn,l in nat_groups.items():
+				if sq_itr in l:
+					teams[sq_itr]['league'] = nn
 			for nn,l in leagues.items():
 				if sq_itr in l:
 					teams[sq_itr]['league'] = nn
@@ -2789,6 +2792,24 @@ def general_list():
 		else:
 			print('┃'.join(line).replace('{0}┃{0}'.format(' '*49),' '*99))
 	input('Return to main menu ')
+
+def export_database():
+	all_teams = {**leagues, **nat_groups}
+	complete_db = {}
+	for l, tl in all_teams.items():
+		complete_db[league_list[l]] = [teams[_] for _ in tl]
+	for l,tl in complete_db.items():
+		for team in tl:
+			new_squad = []
+			for p in team['squad']:
+				new_squad.append({**players_db[p], 'id': p})
+			team['squad'] = new_squad
+	for p in players:
+		if  p['team'] == '---' and len(p['international']) == 0:
+			 complete_db.setdefault('teamless',[]).append(p)
+	print(json.dumps(complete_db,indent=2),file=open('complete_db.json','w+'))
+	input('Database saved as "complete_db.json" in the current folder')
+	return
 	
 def initialize():
 	def start_search():
@@ -2921,6 +2942,7 @@ def main_menu():
 		('Add player to database','os.system(clear_screen);add_player(True)'),
 		('Matchday','os.system(clear_screen); match_day()'),
 		('List all players','os.system(clear_screen);general_list()'),
+		('Export database as JSON file','export_database()'),
 		('Debug mode','os.system(clear_screen);global debug; print("#### Debug mode ####\\n"); debug = True; load_database(); initialize()'),
 		('Select game folder','ch_game_path()'),
 		('Select language','ch_lang()'),
