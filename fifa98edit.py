@@ -635,6 +635,7 @@ def load_database(**args):
 			name_db.setdefault(x['name'],set()).add(x['id'])
 			cur_val = str(x['aggression']) + str(x['acceleration']) + str(x['attack bias']) + str(x['agility']) + str(x['ball']) + str(x['awareness']) + str(x['fitness']) + str(x['creativity']) + str(x['passing']) + str(x['heading']) + str(x['reaction']) + str(x['pass bias']) + str(x['shot power']) + str(x['shot bias']) + str(x['speed']) + str(x['shot accuracy']) + str(x['tackle'])
 			if cur_val in values_db.keys():
+				if x['name'] == 'New Player': continue
 				print(x['name'],'has the same values as', ', '.join([w for w in values_db[cur_val]]))
 		for team,values in team_db.items():
 			if team == -1: continue
@@ -737,13 +738,14 @@ def search_players(a,field,*laconic, **kwargs):
 	if not laconic:
 		if debug == True:
 			print()
-			print('╒%s%s╕'%(30*'═',20*'╤════'))
-			print('│%s%s%s│%s│'%(13*' ','NAME',13*' ','│'.join(["{:4d}".format(x) for x in range(20)])))
+			print(f'╒════╤{30*"═"}{20*"╤════"}╕')
+			print(f'│    │{"Name":^30}│{"│".join(["{:4d}".format(x) for x in range(20)])}│')
 		if table == True:
 			print()
 			print(border)
 			print('│%s│'%'│'.join(fs_center))
 			fields = [set(),[],set(),[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]]
+	fc = 0
 	for b in str(a).split('/'):
 		for x in players:
 			what = b.strip()
@@ -766,9 +768,10 @@ def search_players(a,field,*laconic, **kwargs):
 				if not laconic:
 					fields_off = ['Name','ID','Hair Type','Hair Colour','Skin Colour','Face','Beard','Role','Index FCDBPENG','Index FCDB','Team','International']
 					if debug == True:
-						print('├%s%s┤'%(30*'─',20*'┼────'))
-						print('│%s%s│%s│'%(x['name'],(30-len(x['name']))*' ','│'.join([w[:4] for w in x['binary']])))
-						print('│%s│%s│'%(30*' ','│'.join([w[4:] for w in x['binary']])))
+						print(f'├────┼{30*"─"}{20*"┼────"}┤') #Changed
+						print(f'│{fc:^4}│{x["name"]:<30}│{"│".join([w[:4] for w in x["binary"]])}│')#Changed
+						print(f'│    │{" "*30}│{"│".join([w[4:] for w in x["binary"]])}│')#Changed
+						fc += 1
 					else:
 						if table == False:
 							player_files[index] = ['os.system(clear_screen)']
@@ -856,7 +859,7 @@ def search_players(a,field,*laconic, **kwargs):
 					results += [x['starting'],x['hair colour'],x['skin colour'],x['face'],x['beard'],x['hair type'],x['jersey'],role,x['name'],x['index_fcdbpeng'],players.index(x)] #new
 	if not laconic:
 		if debug == True:
-			print('│%s%s│'%(30*'═',20*'════'))
+			print(f"╘════╧{30*'═'}{20*'╧════'}╛")
 			print()
 			print('Legend: 0.1 = ID; 1.1.1 = Nation, 1.1.2 = ID, 1.2 = ID; 2 = Nation; 3 = In starting lineup; 4 and 5 = Price; 6.1 = Hair, 6.2.1 = Hair Colour 6.2.2 = Skin Colour; 7.1 = Face, 7.2 = Beard; 8.1 = Aggression, 8.2 = Acceleration; 9.1 = Attack Bias, 9.2 = Agility; 10.1 = Ball, 10.2 = Awareness; 11.1 = Fitness, 11.2 = Creativity; 12.1 = Passing, 12.2 = Heading; 13.1 = Reaction, 13.2 = Pass Bias; 14.1 = Shot Power, 14.2 = Shot Bias; 15.1 = Speed, 15.2 = Shot Accuracy; 16.1 = Jersey (low), 16.2 = Tackle; 17.1 = Role, 17.2 = Jersey (high); 18 and 19 = ?')
 			print()
@@ -2810,6 +2813,118 @@ def export_database():
 	print(json.dumps(complete_db,indent=2),file=open('complete_db.json','w+'))
 	input('Database saved as "complete_db.json" in the current folder')
 	return
+
+def list_by_role():
+	maxL = os.get_terminal_size().lines
+	maxW = 80
+	if platform.system() != 'Windows':
+		import termios, tty
+	else:
+		import msvcrt
+	tpos = {}
+	for tm in teams:
+		tpos.setdefault(tm['db_position'],tm)
+	tpos[-1] = {'names':['---']}
+	by_role = {}
+	for p in sorted(players, key=lambda x: x['average'], reverse = True):
+		if p['name'] == 'New Player': continue
+		by_role.setdefault(p['role'],[]).append('{0:<17}{1:<24}{2:<24}{3:>3}'.format(p['name'],tpos[p['team_id']]['names'][-1]+('*' if p['starting'] > 128 else ''),p['country']+('*' if len(p['international']) > 0 else ''),p['average']).center(maxW))
+	role_carousel = ['GK','RB','CB','SW','LB','RM','CM','LM','RF','CF','LF']
+	starting_pos = 0
+	starting_page = 0
+	
+	by_role_pages = {}
+	for role,pls in by_role.items():
+		tmp = [' ']
+		for e,p in enumerate(pls):
+			if e % (maxL - 6) == 0 and e > (maxL - 7): tmp.append('...'.center(maxW))
+			tmp.append(p)
+			if e % (maxL - 6) == maxL-7 and e != len(pls) - 1: tmp.append('...'.center(maxW))
+			if e % (maxL - 6) == maxL-7 or e == len(pls) - 1:
+				if e == len(pls) - 1: tmp.append(maxW*'━')
+				by_role_pages.setdefault(role,[]).append(tmp)
+				tmp = []
+	
+	def capture():
+		if platform.system() != 'Windows':
+			fd = sys.stdin.fileno()
+			attr = termios.tcgetattr(fd)
+			try:
+				tty.setraw(fd)
+				return sys.stdin.read(1)
+			finally:
+				termios.tcsetattr(fd,termios.TCSADRAIN,attr)
+		else:
+			return msvcrt.getch()
+
+	def getter():
+		while(1):
+			k = capture()
+			if k != '': break
+		return ord(k)
+
+	def find_key():
+		command = False
+		while True:		
+			k = getter()
+			if platform.system() != 'Windows':
+				if k == 27:
+					command = True
+					continue
+				else:
+					if command == True:
+						if k == 91: continue
+						if k == 65: return('up')
+						if k == 66: return('down')
+						if k == 67: return('right')
+						if k == 68: return('left')
+						break
+					else:
+						return(chr(k))
+						command = False
+						break
+			else:
+				if k == 224:
+					command = True
+					continue
+				else:
+					if command == True:
+						if k == 72: return('up')
+						if k == 80: return('down')
+						if k == 77: return('right')
+						if k == 75: return('left')
+						break
+					else:
+						return(chr(k))
+						command = False
+						break
+	
+	def print_list(role,page):
+		os.system(clear_screen)
+		
+		print(f' {dict(GK="Goalkeepers", LB="Left Backs", CB="Centre Backs", SW="Sweepers", RB="Right Backs",LM="Left Midfielders", CM="Central Midfielders", RM="Right Midfielders",LF="Left Forwards", CF="Central Forwards", RF="Right Forwards")[role]} ({page+1}/{len(by_role_pages[role])}) '.center(maxW,'━'))
+		print('\n'.join(by_role_pages[role][page]))
+		
+	while True:
+		print_list(role_carousel[starting_pos],starting_page)
+		print('\n',f'Left for {role_carousel[len(role_carousel) -1 if starting_pos - 1 < 0 else starting_pos -1]}, right for {role_carousel[0 if starting_pos + 1 == len(role_carousel) else starting_pos + 1]}, up/down to scroll the list, type "q" to quit', end='\r')
+		k = find_key()
+		if k == 'q': break
+		if k == 'left':
+			if starting_pos - 1 < 0: starting_pos = len(role_carousel) -1
+			else: starting_pos -= 1
+			starting_page = 0
+		if k == 'right':
+			if starting_pos + 1 == len(role_carousel): starting_pos = 0
+			else: starting_pos += 1
+			starting_page = 0
+		if k == 'up':
+			if starting_page > 0:
+				starting_page -= 1
+		if k == 'down':
+			if starting_page < len(by_role_pages[role_carousel[starting_pos]])-1:
+				starting_page += 1
+	return
 	
 def initialize():
 	def start_search():
@@ -2829,19 +2944,19 @@ def initialize():
 				if not table: print('No matches')
 		else:
 			toEdit = False
-			if len(results) == 1 and not table:
+			if len(results) == 1 and not table and not debug:
 				for _ in next(iter(search['files'].values())): exec(_)
 				toEdit = list(search['files'])[0]
 				name = results[0][0]
-			elif len(results) > 1 or table:
+			elif len(results) > 1 or table or debug:
 				action = 'Select' if not table else 'Edit'
 				while True:
 					view = input(f'{action} player:\n\n  %s\n  ----------\n  [c]ancel: '%('\n  '.join(['[%s]: %s (%s, %s)'%(i,x,z,y) for i,(x, y, z) in enumerate(results)])))
 					if view != 'c':
 						if view.isnumeric():
 							if int(view) < len(results):
-								search['files']
-								for _ in search['files'][results[int(view)][1]]: exec(_)
+								if not debug:
+									for _ in search['files'][results[int(view)][1]]: exec(_)
 							else: print('The value "%s" is not in the list'%view)
 						else: print('The value "%s" is not in the list'%view)
 						toEdit = results[int(view)][1]
@@ -2915,19 +3030,30 @@ def ch_game_path(**kwargs):
 	else: return pth
 
 def ch_lang(**kwargs):
+	global f_nomi, f_valori, f_squadre, f_interfaccia, filenames
 	os.system(clear_screen)
 	lval = ['DUT','ENG','FRE','GER','ITA','SPA','SWE']
 	llist = ['Dutch','English','French','German','Italian','Spanish','Swedish']
+	unavailable = []
+	for li,lang in enumerate(lval):
+		if not (os.path.isfile("%s/FCDB_%s.DBI"%(gamepath,lang)) and os.path.isfile("%s/FC%s.BIN"%(gamepath,lang))):
+			unavailable.append(li)
+	for u in unavailable[::-1]:
+		del lval[u]
+		del llist[u]
 	if not kwargs.get('wait',False): print('Current language:', (llist)[(lval).index(lang)])
 	while True:
-		nf = int(inputPlus('Select game language\n $OPTIONLIST_d$$CANCEL$', lval:={x:y for x,y in enumerate(lval)}, dct=llist, c=True, sep="\n ")[0])
+		nf = int(inputPlus('Select *game* (not editor!) language\n $OPTIONLIST_d$$CANCEL$', lval:={x:y for x,y in enumerate(lval)}, dct=llist, c=True, sep="\n ")[0])
 		if nf == len(llist): return False
 		else:
 			custom_vals['lang'] = [lval[nf]]
 			json.dump(custom_vals, open('fifa_config.json', 'w'), indent=2)
 			break
 	print('New game language: %s'%llist[nf])
-	if not kwargs.get('wait',False): restore()
+	if not kwargs.get('wait',False):
+		filenames = ["FCDBPENG.DBI","FCDB.DBI","FCDB_%s.DBI"%lval[nf],"FC%s.BIN"%lval[nf]]
+		f_nomi, f_valori, f_squadre, f_interfaccia = ["%s/%s"%(Fifapath,fn) for fn in filenames]
+		restore()
 	else: return lval[nf]
 
 def main_menu():
@@ -2942,8 +3068,9 @@ def main_menu():
 		('Add player to database','os.system(clear_screen);add_player(True)'),
 		('Matchday','os.system(clear_screen); match_day()'),
 		('List all players','os.system(clear_screen);general_list()'),
+		('List all players by role','list_by_role()'),
 		('Export database as JSON file','export_database()'),
-		('Debug mode','os.system(clear_screen);global debug; print("#### Debug mode ####\\n"); debug = True; load_database(); initialize()'),
+		('Debug mode','os.system(clear_screen);global table, debug; print("#### Debug mode ####\\n"); debug = True; table=False; load_database(); initialize()'),
 		('Select game folder','ch_game_path()'),
 		('Select language','ch_lang()'),
 		('Save to game','commit()'),
@@ -3189,6 +3316,15 @@ Prints a table listing all players divided by position (Goalkeepers, Defenders, 
 ers, Forwards) and sorted by the average of their skill points. The table also shows their
 club team (if any) and nationality. If players are capped for a national team, an asterisk
 is displayed next to their nation.
+
+""","""
+\033[30C------ LIST ALL PLAYERS BY ROLE ------
+
+Prints a table listing all players divided for each role (GK, LB, CB, etc.) sorted by the
+average of their skill points. The table also shows their club team (if any) and nationa-
+lity. If players are capped for a national team, an asterisk is displayed next to their
+nation. If they are in the starting XI of a club, an asterisk is displayed next to their
+team name.
 
 ""","""
 \033[31C------ EXPORT DATABASE AS JSON FILE------
