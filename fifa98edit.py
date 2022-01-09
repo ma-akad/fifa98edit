@@ -21,6 +21,83 @@ import colorsys
 import json
 import unidecode
 
+hslCols = [(242,165,237),(2,206,170),(7,216,107),(19,201,239),(17,234,224),(12,242,163),(34,237,239),(28,219,232),(24,224,170),(83,175,196),(85,226,142),(97,214,99),(145,181,196),(156,178,165),(166,170,147),(174,201,114),(197,160,209),(211,188,140),(188,168,142),(0,2,244),(0,2,226),(127,7,160),(0,0,40)]
+
+def showJersey(jersey,side,je1,je2,je3,sh1,sh2,so1,so2):
+	paletteCols = [
+		(0,0,0),
+		(0,0,0),
+		hslCols[je1],
+		hslCols[je2],
+		hslCols[je3],
+		hslCols[sh1],
+		hslCols[sh2],
+		hslCols[so1],
+		hslCols[so2],
+		(0,0,0),
+		(0,0,0),
+		(0,0,0),
+		(0,0,255)
+	]
+	if not os.path.isfile(jersey_file:=os.path.join(gamepath.replace('common','ingame'),'PLAYER','TEXTURES','PLYRKITS',f'JERS{jersey+1:0>2}.FSH')): return Image.open("jersey_mask.png")
+	data = open(jersey_file, "rb")
+	data.seek(72)
+	bkhi = data.read(128**2)
+	data.seek(22665)
+	frhi = data.read(128**2)
+	side = frhi if side=='front' else bkhi
+	sideMonochrome = [b & 15 for b in side]
+	sideColour = [(b & 240) >> 4 for b in side]
+	flatColside = [paletteCols[c] for c in sideColour]
+	deepColside = [(a,b,int(c*sideMonochrome[e]/15)) for e,(a,b,c) in enumerate(flatColside)]
+	sleeves = os.path.join(gamepath.replace('common','ingame'),'PLAYER','TEXTURES','COMMON','3DTEXHI.FSH')
+	sleeve_data = open(sleeves, "rb")
+	sleeve_data.seek(136)
+	horizontal_sleeve = sleeve_data.read(64*46)
+	sleeve_data.seek(4136)
+	vertical_sleeve = sleeve_data.read(64*46)
+	sleeve = horizontal_sleeve if jersey in [3,4,22] else vertical_sleeve
+	sleeve = [b''.join(sleeve[i:i+12] for i in range(32,2944,64)), b''.join(sleeve[i:i+20] for i in range(44,2944,64))]
+	if jersey in [2,3,4,9,14,16,17,18,21]:
+		paletteCols[9] = paletteCols[2]
+		paletteCols[10] = paletteCols[3]
+	if jersey in [19,20]:
+		paletteCols[9] = paletteCols[3]
+		paletteCols[10] = paletteCols[2]
+	if jersey == 22:
+		paletteCols[9] = paletteCols[2]
+		paletteCols[10] = paletteCols[4]
+	if jersey in [0,1,6,7,8,10,11,12,13,15,23,24,25,26,27,29,30,31,32] or jersey > 32:
+		paletteCols[9] = paletteCols[2]
+		paletteCols[10] = paletteCols[2]
+	if jersey in [5,28]:
+		paletteCols[9] = paletteCols[3]
+		paletteCols[10] = paletteCols[3]
+	sleeve_Monochrome =  [[b & 15 for b in sleeve[0]],[b & 15 for b in sleeve[1]]]
+	sleeve_Colour = [[(b & 240) >> 4 for b in sleeve[0]], [(b & 240) >> 4 for b in sleeve[1]]]
+	flatColSleeve = [[paletteCols[c] for c in sleeve_Colour[0]],[paletteCols[c] for c in sleeve_Colour[1]]]
+	deepColSleeve = [[(a,b,int(c*sleeve_Monochrome[0][e]/15)) for e,(a,b,c) in enumerate(flatColSleeve[0])],[(a,b,int(c*sleeve_Monochrome[1][e]/15)) for e,(a,b,c) in enumerate(flatColSleeve[1])]]
+	sleeveTopImg = Image.new('HSV', (12,46), "white")
+	sleeveTopImg.putdata(deepColSleeve[0])
+	sleeveTopImg = sleeveTopImg.resize((28,46),resample=Image.NEAREST)
+	sleeveBottomImg = Image.new('HSV', (20,46), "white")
+	sleeveBottomImg.putdata(deepColSleeve[1])
+	sleeveBottomImg = sleeveBottomImg.resize((18,46),resample=Image.NEAREST)
+	sleeveImg = Image.new('HSV', (46,46), "white")
+	sleeveImg.paste(sleeveTopImg,(0,0))
+	sleeveImg.paste(sleeveBottomImg,(28,0))
+	leftSleeve = sleeveImg.rotate(285,expand=1,fillcolor=(0,0,209))
+	rightSleeve = sleeveImg.rotate(105,expand=1,fillcolor=(0,0,209)).transpose(method=Image.FLIP_TOP_BOTTOM)
+	chest = Image.new('HSV', (128,128), "white")
+	chest.putdata(deepColside)
+	img = Image.new('RGBA', (218,128), (209,209,209))
+	img.paste(leftSleeve, (0,0))
+	img.paste(rightSleeve, (160,0))
+	img.paste(chest,(45,0))
+	mask = Image.open("jersey_mask.png")
+	img.paste(mask, (0,0), mask=mask)
+	return img
+
 def colorize_feats(filename, colour):
 	if colour == 0:
 		hs = -7
@@ -110,7 +187,7 @@ if platform.system() == 'Windows':
 		'\033[30;100m▒▒',
 		'\033[0;90m▒▒'
 	]
-else:	
+else:
 	home = os.path.expanduser('~')
 	gamepath = ["/Applications/fifa98.app/Contents/Resources/drive_c/Program Files/FIFA RTWC 98/common"]
 	clear_screen = "clear && printf '\e[3J'"
@@ -285,10 +362,10 @@ fieldopedia = {
 	'Name': {'short': 'Name', 'width': 16, 'db': 'name', 'align':'l'},
 	'ID': {'short': 'ID', 'width': 5, 'db': 'id', 'align':'c'},
 	'Nation': {'short': 'Nation', 'width': 21, 'db': 'country', 'align':'l'},
-	'Hair Type': {'short': 'H', 'width': 1, 'db': 'hair type', 'align':'c'}, 
-	'Hair Colour': {'short': 'HC', 'width': 2, 'db': 'hair colour', 'align':'c'},  
+	'Hair Type': {'short': 'H', 'width': 1, 'db': 'hair type', 'align':'c'},
+	'Hair Colour': {'short': 'HC', 'width': 2, 'db': 'hair colour', 'align':'c'},
 	'Skin Colour': {'short': 'SC', 'width': 2, 'db': 'skin colour', 'align':'c'},
-	'Face': {'short': 'F', 'width': 1, 'db': 'face', 'align':'c'}, 
+	'Face': {'short': 'F', 'width': 1, 'db': 'face', 'align':'c'},
 	'Beard': {'short': 'B', 'width': 1, 'db': 'beard', 'align':'c'},
 	'Price': {'short': '$$$', 'width': 7, 'db': 'price', 'align':'r'},
 	'Jersey': {'short': 'Jers', 'width': 4, 'db': 'jersey', 'align':'r'},
@@ -348,7 +425,7 @@ def align(t,f):
 			t = '{:X}'.format(int(t))
 		if len(t) > fieldopedia[f]['width']:
 			t = t[:fieldopedia[f]['width']-2] + '..'
-		if al == 'l':	
+		if al == 'l':
 			return '{0}{1}'.format(t, (fieldopedia[f]['width']-len(t))*' ')
 		elif al == 'r':
 			return '{1}{0}'.format(t, (fieldopedia[f]['width']-len(t))*' ')
@@ -371,7 +448,7 @@ def cpdb():
 def load_database(**args):
 	if args.get('load',0) > 0: return
 	global players, teams, league_list, nations, sorted_leagues, sorted_leagues_names, players_db
-	
+
 	#load player names
 	print('\033[KLoading names...', end ='')
 	players = []
@@ -452,7 +529,7 @@ def load_database(**args):
 				elif new_char != b'\x00':
 					string += new_char
 				else:
-					if len(string) > 0:	
+					if len(string) > 0:
 						temp_list.append(string.decode('unicode_escape'))
 						string = b''
 			else:
@@ -474,7 +551,7 @@ def load_database(**args):
 	valori.seek(16,0)
 	init_byte = struct.unpack("<h", valori.read(2))[0]+8
 	valori.seek(init_teams, 0)
-	
+
 	#retrieve team data
 	squad = b''
 	sq_idx = 0
@@ -569,7 +646,7 @@ def load_database(**args):
 			if bit_idx == 4:
 				players[iterations]['price'] = int.from_bytes(new_char, 'big')
 			if bit_idx == 5:
-				players[iterations]['price'] = (int.from_bytes(new_char, 'big') << 8) + players[iterations]['price']		
+				players[iterations]['price'] = (int.from_bytes(new_char, 'big') << 8) + players[iterations]['price']
 			if bit_idx == 6:
 				hair = int.from_bytes(new_char, 'big') >> 4
 				hair_c = hair_cl[(int.from_bytes(new_char, 'big') & 12) >> 2]
@@ -615,7 +692,7 @@ def load_database(**args):
 			if bit_idx == 18:
 				players[iterations]['average']  = math.floor(sum([players[iterations][fieldopedia[r]['db']] for r in skill_fields])/len(skill_fields))
 			bit_idx +=1
-			
+
 		if debug == True:
 			binary = []
 			for bit in string:
@@ -717,12 +794,12 @@ def add_player(*from_menu):
 		temp_file += struct.pack("<l", new_index)
 		if nomi.tell() == end_prelim_byte: break
 	new_index = sorted(indexes)[-1]
-	temp_file += struct.pack("<l", new_index + len_lpn + 1)	
+	temp_file += struct.pack("<l", new_index + len_lpn + 1)
 	temp_file += nomi.read()
 	temp_file += bytes('New Player', 'iso-8859-1')
 	temp_file += b'\x00'
 	save(f_nomi, temp_file)
-	if from_menu: 
+	if from_menu:
 		load_database()
 		search = search_players(index_fcdb,'index_fcdb')
 		results = search['results']
@@ -731,7 +808,7 @@ def add_player(*from_menu):
 		for _ in search_players(edit_player(index_fcdb),'index_fcdb',strict=True)['files'][toEdit]: exec(_)
 		input('\nReturn to main menu')
 	else: return "{:04X}".format(int.from_bytes(new_id.to_bytes(2, 'little'), 'big'))
-		
+
 def search_players(a,field,*laconic, **kwargs):
 	results = []
 	player_files = {}
@@ -821,7 +898,7 @@ def search_players(a,field,*laconic, **kwargs):
 							player_files[index].append("print('\033[43C',40*'─',sep = '')")
 							player_files[index].append(f"print('\033[43CAVERAGE:', '{x['average']}', sep ='\t\t\t')")
 							player_files[index].append("print()")
-						else:	
+						else:
 							player_files[index] = ['']
 							team_string = "{:<10}".format(x['team'])
 							international = ['','']
@@ -833,7 +910,7 @@ def search_players(a,field,*laconic, **kwargs):
 							international = ''.join(international)
 
 							if len(team_string)>10:team_string=team_string[:8]+'..'
-						
+
 							print(inner_line)
 							tbl_row ='│'
 							for g in field_order[:-1]:
@@ -879,7 +956,7 @@ def search_players(a,field,*laconic, **kwargs):
 					if e == 1: fields[e] = align(math.floor(sum(fields[e])/len(fields[e])),'Price')
 					if e == 2: fields[e] = align(conflict, 'Average')
 					if e > 2:  fields[e] = align(math.floor(sum(fields[e])/len(fields[e])),'Average')
-			
+
 			frag_border = ' '
 			summary = ' '
 			cy = 0
@@ -908,7 +985,7 @@ def search_players(a,field,*laconic, **kwargs):
 			print(end_border,summary,frag_border,sep='\n')
 			print()
 	return {'results':results,'files':player_files}
-	
+
 def edit_player(modify,**args):
 	global f_valori, f_nomi, roles, nations
 	vals_already = search_players(modify, 'index_fcdb', True, strict=True)['results']
@@ -1136,6 +1213,13 @@ Parameter to edit:
 				print('\nSelect new face')
 				face_sel = tk.Tk()
 				face_sel.geometry('+0+0')
+				face_sel.attributes("-topmost", True)
+				global c
+				c = None
+				def on_closing(event):
+					if event.widget == face_sel:
+						if platform.system() == 'Darwin': os.system('''/usr/bin/osascript -e 'tell app "Finder" to set frontmost of process "Terminal" to true' ''')
+				face_sel.bind("<Destroy>", on_closing)
 				photo = []
 				def callback(n):
 					global c
@@ -1148,7 +1232,7 @@ Parameter to edit:
 					f_hair = colorize_feats("FifaStyles/fh{:02}.png".format(vals_already[-7]), vals_already[-10])
 					col_img.paste(hair,(0,0),hair)
 					col_img.paste(f_hair,(0,0),f_hair)
-					col_img = ImageTk.PhotoImage(image = col_img)	
+					col_img = ImageTk.PhotoImage(image = col_img)
 					photo.append(col_img)
 					btn = tk.Button(text = '%s'%f, image = photo[f], width=50, height=46)
 					if f == vals_already[-8]:
@@ -1157,12 +1241,11 @@ Parameter to edit:
 						btn['highlightbackground']="#37d3ff"
 						btn['borderwidth']=4
 					btn['command'] = lambda b=btn: callback(b)
-					btn.pack()
-				tk.mainloop()
-				try:
-					new_face = c
-				except:
-					new_face = vals_already[-8]
+					btn.grid(row=int(f/4), column=f%4, padx=2, pady=2)
+				face_sel.title(f'{vals_already[-3]}: face')
+				face_sel.mainloop()
+				if new_face is None:
+					new_face = c or vals_already[-8]
 				print('Face selected: %s'%faces[new_face])
 			new_face = int(new_face) << 3
 			valori.seek(0, 0)
@@ -1184,6 +1267,12 @@ Parameter to edit:
 				print('\nSelect new facial hair')
 				face_sel = tk.Tk()
 				face_sel.geometry('+0+0')
+				face_sel.attributes("-topmost", True)
+				c = None
+				def on_closing(event):
+					if event.widget == face_sel:
+						if platform.system() == 'Darwin': os.system('''/usr/bin/osascript -e 'tell app "Finder" to set frontmost of process "Terminal" to true' ''')
+				face_sel.bind("<Destroy>", on_closing)
 				photo = []
 				def callback(n):
 					global c
@@ -1196,7 +1285,7 @@ Parameter to edit:
 					f_hair = colorize_feats("FifaStyles/fh{:02}.png".format(f), vals_already[-10])
 					col_img.paste(hair,(0,0),hair)
 					col_img.paste(f_hair,(0,0),f_hair)
-					col_img = ImageTk.PhotoImage(image = col_img)	
+					col_img = ImageTk.PhotoImage(image = col_img)
 					photo.append(col_img)
 					btn = tk.Button(text = '%s'%f, image = photo[f], width=50, height=46)
 					if f == vals_already[-7]:
@@ -1205,12 +1294,10 @@ Parameter to edit:
 						btn['highlightbackground']="#37d3ff"
 						btn['borderwidth']=4
 					btn['command'] = lambda b=btn: callback(b)
-					btn.pack()
-				tk.mainloop()
-				try:
-					new_beard = c
-				except:
-					new_beard = vals_already[-7]
+					btn.grid(row=int(f/4), column=f%4, padx=2, pady=2)
+				face_sel.title(f'{vals_already[-3]}: facial hair')
+				face_sel.mainloop()
+				if new_beard is None: new_beard = c or vals_already[-7]
 				print('Facial hair selected: %s'%beards[new_beard])
 			new_beard = int(new_beard)
 			valori.seek(0, 0)
@@ -1232,6 +1319,12 @@ Parameter to edit:
 				print('\nSelect new hairstyle')
 				face_sel = tk.Tk()
 				face_sel.geometry('+0+0')
+				face_sel.attributes("-topmost", True)
+				c = None
+				def on_closing(event):
+					if event.widget == face_sel:
+						if platform.system() == 'Darwin': os.system('''/usr/bin/osascript -e 'tell app "Finder" to set frontmost of process "Terminal" to true' ''')
+				face_sel.bind("<Destroy>", on_closing)
 				photo = []
 				def callback(n):
 					global c
@@ -1253,12 +1346,11 @@ Parameter to edit:
 						btn['highlightbackground']="#37d3ff"
 						btn['borderwidth']=4
 					btn['command'] = lambda b=btn: callback(b)
-					btn.pack()
-				tk.mainloop()
-				try:
-					new_hair = c
-				except:
-					new_hair = vals_already[-6]
+					btn.grid(row=int(f/4), column=f%4, padx=2, pady=2)
+				face_sel.title(f'{vals_already[-3]}: hair')
+				face_sel.mainloop()
+				if new_hair is None:
+					new_hair = c or vals_already[-6]
 				print('Hairstyle selected: %s'%hairs[new_hair])
 			new_hair = int(new_hair) << 4
 			valori.seek(0, 0)
@@ -1355,7 +1447,7 @@ Parameter to edit:
 						"Biases alter the distribution of skill points.",
 						"Biases may be combined and will be applied in order. The",
 						"last bias prevails (e.g. 87.sa ==> speedy player + attacking",
-						"player (attacking > speedy, average 87)"					
+						"player (attacking > speedy, average 87)"
 					]),end='\n\n\n\n')
 					def handle_ai(difference,direction):
 						vals = vals_already[0:17]
@@ -1431,14 +1523,17 @@ Parameter to edit:
 	try:
 		p = args['value']
 	except:
-		if input('Continue editing? [yn] ') == 'y': edit_player(modify)
+		if input('Continue editing? [yn] ') == 'y':
+			os.system(clear_screen)
+			for _ in search_players(mod_offset,'index_fcdb',strict=True)['files'][modify]: exec(_)
+			edit_player(modify)
 	else:
 		del p
 	valori.close()
 	if args.get('returnValues'):
 		return {field:new_vals[e] for e,field in enumerate(list(fieldopedia.keys())[11:28])}
 	return mod_offset
-	
+
 def show_teams(*index):
 	p = {}
 	for pos,pl in enumerate(players):
@@ -1482,14 +1577,12 @@ def _display_team(params, **kwargs):
 	firstkit, secondkit = '', ''
 	firstkit+="\033[10C".join(['1st shirt type', t['first shirt']])
 	firstkit+="\n1st shirt colours\033[7C%s%s%s\033[0m "%(cesc[t['first shirt - colour 1']],cesc[t['first shirt - colour 2']],cesc[t['first shirt - colour 3']])
-	if jerseys: firstkit+=display_jersey(jersey_types.index(t['first shirt']),t['first shirt - colour 1'],t['first shirt - colour 2'],t['first shirt - colour 3'])
 	firstkit+='\n'+"\033[9C".join(['1st shorts type', t['first shorts']])
 	firstkit+='\n1st shorts colours\033[6C%s%s\033[0m'%(cesc[t['first shorts - colour 1']],cesc[t['first shorts - colour 2']])
 	firstkit+='\n'+"\033[10C".join(['1st socks type', t['first socks']])
 	firstkit+='\n1st socks colours\033[7C%s%s\033[0m'%(cesc[t['first socks - colour 1']],cesc[t['first socks - colour 2']])
 	secondkit+="\033[10C".join(['2nd shirt type', t['second shirt']])
 	secondkit+='\n2nd shirt colours\033[7C%s%s%s\033[0m'%(cesc[t['second shirt - colour 1']],cesc[t['second shirt - colour 2']],cesc[t['second shirt - colour 3']])
-	if jerseys: secondkit+=display_jersey(jersey_types.index(t['second shirt']),t['second shirt - colour 1'],t['second shirt - colour 2'],t['second shirt - colour 3'])
 	secondkit+='\n'+"\033[9C".join(['2nd shorts type', t['second shorts']])
 	secondkit+='\n2nd shorts colours\033[6C%s%s\033[0m'%(cesc[t['second shorts - colour 1']],cesc[t['second shorts - colour 2']])
 	secondkit+='\n'+"\033[10C".join(['2nd socks type', t['second socks']])
@@ -1544,34 +1637,139 @@ def _display_team(params, **kwargs):
 	print('%s'%('━'*80))
 	if len(index) == 0 and not refresh:
 		team_data_query = ''
-		standard_query = f"[e]dit team {t['names'][-1]} / [s]how player info / [n]ext team / [c]ancel: "
-		while True:
-			if (action:=input(f"\n{standard_query}")) == 'e':
-				edit_team(t)
+		standard_query = f"[e]dit team {t['names'][-1]} / show [k]its / [s]how player info {'/ [h]istory ' if t['league'] < 11 else ''}/ [n]ext team / [c]ancel"
+		if platform.system() != 'Windows':
+			import termios, tty
+		else:
+			import msvcrt
+		def capture():
+			if platform.system() != 'Windows':
+				fd = sys.stdin.fileno()
+				attr = termios.tcgetattr(fd)
+				try:
+					tty.setraw(fd)
+					return sys.stdin.read(1)
+				finally:
+					termios.tcsetattr(fd,termios.TCSADRAIN,attr)
+			else:
+				return msvcrt.getch()
+
+		def getter():
+			while(1):
+				k = capture()
+				if k != '': break
+			return ord(k)
+		while True: #NEW
+			print('\033[41;37m\n',standard_query,"\033[0m", sep="",end = "\r")
+			k = chr(getter())
+			if k == 'e':
+				print('\033[2K\033[1A')
+				edit_team(teams[idx])
 				if _display_team(params, refresh=True) == 'cancelled': return 'cancelled'
-			elif action == 's':
+			elif k == 'k': #NEW
+				def on_closing(event):
+					if event.widget == kitWindow:
+						if platform.system() == 'Darwin': os.system('''/usr/bin/osascript -e 'tell app "Finder" to set frontmost of process "Terminal" to true' ''')
+				kitWindow = tk.Tk()
+				kitWindow.geometry('+0+0')
+				kitWindow.title(f'{t["names"][-1]}: home/away jerseys')
+				kitWindow.bind("<Destroy>", on_closing)
+				kitWindow.attributes("-topmost", True)
+				homeKit = showJersey(jersey_types.index(teams[idx]['first shirt']),'front',teams[idx]['first shirt - colour 1'],teams[idx]['first shirt - colour 2'],teams[idx]['first shirt - colour 3'],teams[idx]['first shorts - colour 1'],teams[idx]['first shorts - colour 2'],teams[idx]['first socks - colour 1'],teams[idx]['first socks - colour 2']) #NEW
+				awayKit = showJersey(jersey_types.index(teams[idx]['second shirt']),'front',teams[idx]['second shirt - colour 1'],teams[idx]['second shirt - colour 2'],teams[idx]['second shirt - colour 3'],teams[idx]['second shorts - colour 1'],teams[idx]['second shorts - colour 2'],teams[idx]['second socks - colour 1'],teams[idx]['second socks - colour 2'])
+				hkimg = ImageTk.PhotoImage(homeKit)
+				akimg = ImageTk.PhotoImage(awayKit)
+				homeKitDisplay = Label(kitWindow,image = hkimg)
+				homeKitDisplay.pack(side = "left", fill = "none", expand = "yes")
+				awayKitDisplay = Label(kitWindow,image = akimg)
+				awayKitDisplay.pack(side = "right", fill = "none", expand = "yes")
+				kitWindow.mainloop()
+				print('\033[1A',end="")
+			elif k == 's':
+				print('\033[2K\033[2A')
 				global table
 				table = False
-				team_data_query = '[r]eturn to team info / [s]how other player info / [c]ancel: '
+				team_data_query = '[r]eturn to team info / [s]how other player info / [c]ancel'
 				standard_query = team_data_query
 				plnames = [_[0] for _ in sorted(rt['pl_list'], key=lambda w:w[0])]
 				plindexes = [_[-2] for _ in sorted(rt['pl_list'], key=lambda w:w[0])] + ['cancel']
-				plids = [_[-3] for _ in sorted(rt['pl_list'], key=lambda w:w[0])] + ['cancel']
-				plindex = plindexes[(selOpt:=int(inputPlus('\nSelect Player:\n  $OPTIONLIST_l$$CANCEL$', plnames, c=True, sep='\n  ')[0]))]
-				plid = plids[selOpt]
+				plids = [_[-3] for _ in sorted(rt['pl_list'], key=lambda w:w[0])] + ['cancel'] #ND
+				plindex = plindexes[(selOpt:=int(inputPlus('\nSelect Player:\n  $OPTIONLIST_l$$CANCEL$', plnames, c=True, sep='\n  ')[0]))] #ND: remove selOpt
+				plid = plids[selOpt] #ND
 				if plindex == 'cancel':
-					os.system(clear_screen)
-					continue
+					team_data_query = 'return'
+					break
 				os.system(clear_screen)
-				for _ in search_players(plid, 'id', index=plindex)['files'][plindex]:
-					exec(_)
-			elif action == 'n':
+				for _ in search_players(plid, 'id', index=plindex)['files'][plindex]: exec(_) #ND id-->index_fcdb
+			elif k == 'h' and t['league'] < 11: #ND
+				print('\033[2A\033[J\n')
+				history_db = []
+				for plid,pldata in pl_stats.items():
+					seasons_in_team = []
+					presences_in_team = []
+					goals_in_team = []
+					tNameUpd = _updateNames(t['names'][-1])
+					for season in [s for s in pldata if isinstance(s, int)]:
+						if tNameUpd in (seasonTeams:=[_updateNames(tt) for tt in pldata[season][0].split('/')]):
+							which_part = seasonTeams.index(tNameUpd)
+							seasons_in_team.append(season)
+							appearances = [str(pldata[season][1][1])]
+							goals = [str(pldata[season][1][2])]
+							if len(pldata[season][0].split('/')) > 1:
+								if not '=' in appearances[0]: appearances = [0] * len(pldata[season][0].split('/'))
+								else: appearances = appearances[0].replace('=','').split('+')
+								if not '=' in goals[0]: goals = [0] * len(pldata[season][0].split('/'))
+								else: goals = goals[0].replace('=','').split('+')
+							presences_in_team.append(int(str(appearances[which_part]).replace('-','0')))
+							goals_in_team.append(int(str(goals[which_part]).replace('-','0')))
+					if len(seasons_in_team) > 0:
+						history_db.append([
+							players_db[plid]['name'],
+							players_db[plid]['role'],
+							players_db[plid]['country'],
+							seasons_in_team,
+							dict(zip(seasons_in_team,zip(presences_in_team,goals_in_team))),
+							plid
+						])
+				history_db = sorted(history_db, key=lambda w:w[3])
+				first_season = history_db[0][3][0]
+				last_season = history_db[-1][3][-1]
+				season_count = last_season+1-first_season
+				by_year={}
+				nations=set()
+				print(f"┏{16*'━'}┳{4*'━'}┳{19*'━'}┳{'┳'.join(season_count*['━━━━━━━'])}┳━━━━━━━┓")
+				print(f"┃{'PLAYER':^16}┃{'R':^4}┃{'NATION':^19}┃{'┃'.join([str(history_db[0][3][0]+e).center(7) for e in range(season_count)])}┃ TOTAL ┃")
+				print(f"┣{16*'━'}╇{4*'━'}╇{19*'━'}{season_count*'╇━━━━━━━'}╇━━━━━━━┫")
+				for i,player in enumerate(history_db):
+					pl_totals = f"{sum([stats[0] for stats in player[4].values()])}:{sum([stats[1] for stats in player[4].values()])}".center(7)
+					history_db[i].append(int(pl_totals.split(':')[0]))
+					history_db[i].append(int(pl_totals.split(':')[1]))
+					pl_byYear = []
+					nations.add(player[2])
+					pl_byYear = [(f"\033[42m{':'.join(str(x) for x in player[4].get(annee,None)).center(7)}\033[0m" if player[4].get(annee,None) else f"\033[37m{tmnm.get(pl_stats[player[5]].get(annee,[' '])[0].split('/')[-1].replace(' (juv.)',''),pl_stats[player[5]].get(annee,[' '])[0].split('/')[-1][:7]).center(7)}\033[0m") for annee in range(first_season,last_season+1)]
+					for annee in range(first_season,last_season+1):
+						by_year.setdefault(annee,[0,0])
+						if (player[4].get(annee,None)):
+							by_year[annee] = [a+b for a,b in zip(by_year[annee], [1,player[4].get(annee,[0,0])[1]])]
+					print(f"┃{player[0]:^16}│{player[1]:^4}│{player[2]:^19}│{'│'.join(pl_byYear)}│{pl_totals}┃")
+					print(f"┠{16*'─'}┼{4*'─'}┼{19*'─'}{season_count*'┼───────'}┼───────┨")
+				print(f"\033[1A┣{16*'━'}╈{4*'━'}╈{19*'━'}{season_count*'╈━━━━━━━'}╈━━━━━━━┫")
+				print(f"┃{str(len(history_db))+' players':^16}┃    ┃{str(len(nations))+' countries':^19}┃{'┃'.join([':'.join(str(x) for x in by_year[annee]).center(7) for annee in range(first_season,last_season+1)])}┃{sum(y[1] for y in by_year.values()):^7}┃")
+				print(f"┗{16*'━'}┻{4*'━'}┻{19*'━'}{season_count*'┻━━━━━━━'}┻━━━━━━━┛")
+				history(tNameUpd,first_season, last_season)
+				print('Most appearances:'.ljust(20),sorted(history_db, key = lambda w: w[6])[-1][0],f"({sorted(history_db, key = lambda w: w[6])[-1][6]})")
+				print('Top scorer:'.ljust(20),sorted(history_db, key = lambda w: w[7])[-1][0],f"({sorted(history_db, key = lambda w: w[7])[-1][7]})")
+			elif k == 'n':
+				print('\033[2A')
+				print('\033[J', end="")
 				break
-			elif action =='c':
+			elif k =='c':
 				return 'cancelled'
-			elif action == 'r':
+			elif k == 'r':
 				team_data_query = 'return'
 				break
+			else:
+				print('\033[2A')
 		if team_data_query == 'return':
 			if _display_team(params) == 'cancelled': return 'cancelled'
 
@@ -1943,11 +2141,11 @@ Parameter to edit:
 			squadre.seek(12,0)
 			init_byte = struct.unpack("<h", squadre.read(2))[0]
 			end_prelim_byte = init_byte + 8
-		
+
 			#copy initial bit
 			squadre.seek(0,0)
 			temp_file = squadre.read(end_prelim_byte)
-		
+
 			#team count
 			squadre.seek(init_byte,0)
 			team_count = struct.unpack("<h", squadre.read(2))[0]
@@ -1979,7 +2177,7 @@ Parameter to edit:
 						elif new_char != b'\x00':
 							string += new_char
 						else:
-							if len(string) > 0:	
+							if len(string) > 0:
 								temp_file_3 += string + b'\x00'
 								string = b''
 					else:
@@ -1991,7 +2189,7 @@ Parameter to edit:
 		elif what_to_edit == 'b':
 			if new_value is None: new_value = input('\nEnter new bankroll (hit return to cancel): ')
 			if len(new_value) > 0:
-				if not new_value.isdigit(): 
+				if not new_value.isdigit():
 					new_value = None
 					continue
 				else: new_value = int(new_value)
@@ -2015,13 +2213,68 @@ Parameter to edit:
 				temp_file+=valori.read()
 				save(f_valori, temp_file)
 				load_database(load=len(args.get('field', '')))
-		elif what_to_edit in ['fs','ss']:
+		elif what_to_edit in ['fs','ss']: #NEW
 			kit = [0,'first'] if what_to_edit[0] == 'f' else [8,'second']
-			select_jersey(vals_already[kit[1]+' shirt - colour 1'],vals_already[kit[1]+' shirt - colour 2'],vals_already[kit[1]+' shirt - colour 3'])
-			addtypes = '' if len(jersey_types) == 32 else '\n\t--- custom jerseys ---\n\t%s'%'\n\t'.join([
-				'[%s] %s'%(e,f) for e,f in enumerate(jersey_types) if e > 32
-			])
-			if new_value is None: new_value = int(inputPlus('\nEnter shirt type %s$CANCEL$'%addtypes,jersey_types,c=True,sep="\n\t")[0])
+			if os.path.isdir(os.path.join(gamepath.replace('common','ingame'),'PLAYER','TEXTURES','PLYRKITS')):
+				jerseys = [_ for _ in os.listdir(os.path.join(gamepath.replace('common','ingame'),'PLAYER','TEXTURES','PLYRKITS')) if re.match('jers\d\d.fsh',_.lower())]
+				root = tk.Tk()
+				root.title('Select jersey')
+				root.geometry("800x600+0+0")
+				#Code from Codemy
+				# Create A Main Frame
+				main_frame = Frame(root)
+				main_frame.pack(fill="both", expand=1)
+
+				# Create A Canvas
+				my_canvas = tk.Canvas(main_frame)
+				my_canvas.pack(side="left", fill="both", expand=1)
+
+				# Add A Scrollbar To The Canvas
+				my_scrollbar = Scrollbar(main_frame, orient="vertical", command=my_canvas.yview)
+				my_scrollbar.pack(side="right", fill="y")
+
+				# Configure The Canvas
+				my_canvas.configure(yscrollcommand=my_scrollbar.set)
+				my_canvas.bind('<Configure>', lambda e: my_canvas.configure(scrollregion = my_canvas.bbox("all")))
+
+				# Create ANOTHER Frame INSIDE the Canvas
+				second_frame = Frame(my_canvas)
+
+				# Add that New frame To a Window In The Canvas
+				my_canvas.create_window((0,0), window=second_frame, anchor="nw")
+				images = []
+				global c
+				c = None
+				def on_closing(event):
+					if event.widget == root:
+						if platform.system() == 'Darwin': os.system('''/usr/bin/osascript -e 'tell app "Finder" to set frontmost of process "Terminal" to true' ''')
+				root.bind("<Destroy>", on_closing)
+				def callback(n):
+					global c
+					c = int(n['text'])
+					root.destroy()
+					if platform.system() == 'Darwin': os.system('''/usr/bin/osascript -e 'tell app "Finder" to set frontmost of process "Terminal" to true' ''')
+				for e,j in enumerate(jerseys):
+					images.append(ImageTk.PhotoImage(image = showJersey(e,'front',vals_already[f'{kit[1]} shirt - colour 1'],vals_already[f'{kit[1]} shirt - colour 2'],vals_already[f'{kit[1]} shirt - colour 3'],vals_already[f'{kit[1]} shorts - colour 1'],vals_already[f'{kit[1]} shorts - colour 2'],vals_already[f'{kit[1]} socks - colour 1'],vals_already[f'{kit[1]} socks - colour 2'])))
+					btn = tk.Button(second_frame, text = e, image = images[-1])
+					if e == jersey_types.index(vals_already[f'{kit[1]} shirt']):
+						btn['highlightthickness']=4
+						btn['highlightcolor']="#37d3ff"
+						btn['highlightbackground']="#37d3ff"
+						btn['borderwidth']=4
+					btn['command'] = lambda b=btn: callback(b)
+					btn.grid(row=int(e/3), column=e%3, padx=10, pady=10)
+				root.attributes("-topmost", True)
+				root.mainloop()
+				if new_value is None:
+					new_value = c or jersey_types.index(vals_already[f'{kit[1]} shirt'])
+					# new_value = int(inputPlus('\nEnter shirt type %s$CANCEL$'%addtypes,jersey_types,c=True,sep="\n\t")[0])
+			else:
+				select_jersey(vals_already[kit[1]+' shirt - colour 1'],vals_already[kit[1]+' shirt - colour 2'],vals_already[kit[1]+' shirt - colour 3'])
+				addtypes = '' if len(jersey_types) == 32 else '\n\t--- custom jerseys ---\n\t%s'%'\n\t'.join([
+					'[%s] %s'%(e,f) for e,f in enumerate(jersey_types) if e > 32
+				])
+				if new_value is None: new_value = int(inputPlus('\nEnter shirt type %s$CANCEL$'%addtypes,jersey_types,c=True,sep="\n\t")[0])
 			if new_value < len(jersey_types):
 				temp_bytes[5+kit[0]] = bytes([(int.from_bytes(temp_bytes[5+kit[0]], 'big') & 3)+ (new_value << 2)])
 				temp_file+=b''.join(temp_bytes)
@@ -2163,12 +2416,12 @@ Parameter to edit:
 				if new_taker < 11:
 					new_value = roster[new_taker]
 				else: return
-			
+
 			old_score = new_value['shot power']
 			old_score1 = new_value['shot accuracy']
 			old_score2 = new_value['passing']
 			old_average = new_value['average']
-					
+
 			current_max = sorted(roster, key = lambda w: w['shot power'])[-1]['shot power']
 			if current_max < 99:
 				edit_player(new_value['index_fcdb'],field='12',value=current_max+4)
@@ -2179,18 +2432,18 @@ Parameter to edit:
 				edit_player(new_value['index_fcdb'],field='12',value=99)
 
 			if args.get('value', None): load_database()
-			
+
 			if old_average > 75:
-				if old_score1 < 83: 
+				if old_score1 < 83:
 					edit_player(new_value['index_fcdb'],field='15',value=old_score1+8) #accuracy
 					if args.get('value', None): load_database()
 				if old_score2 < 83:
 					edit_player(new_value['index_fcdb'],field='8',value=old_score2+4) #passing
-			
+
 			load_database()
 
 			target_player = [p for p in players if p['index_fcdb'] == new_value['index_fcdb']][0]
-				
+
 			if target_player['average'] != old_average:
 				skillsToDiminish = [1,14,3,5,9,10,0,16]
 				score_diff = (target_player['shot power'] - old_score) + (target_player['shot accuracy'] - old_score1) + (target_player['passing'] - old_score2)
@@ -2204,9 +2457,9 @@ Parameter to edit:
 					if math.floor(sum(new_skills)/len(new_skills)) == old_average: break
 					if score_diff == 0: break
 				edit_player(new_value['index_fcdb'], field='*', value=''.join((str(s) for s in new_skills)), verbose=False)
-				
+
 				load_database()
-				
+
 			print(sorted([p for p in players if p['id'] in vals_already['squad'] and p['starting'] > 128], key=lambda w:w['shot power'])[-1]['name'], 'is the new set piece taker of', vals_already['names'][-1])
 			if args.get('returnValues', None):
 				target_player = [p for p in players if p['index_fcdb'] == new_value['index_fcdb']][0]
@@ -2218,7 +2471,7 @@ Parameter to edit:
 	try:
 		p = args['value']
 	except:
-		if input('Continue editing %s? [yn] '%vals_already['names'][-1]) == 'y': edit_team(modify)
+		if input('Continue editing %s? [yn] '%vals_already['names'][-1]) == 'y': edit_team(teams[modify['db_position']])
 	else:
 		del p
 	valori.close()
@@ -2277,7 +2530,7 @@ def convoca(team_data, *lax, **kwargs):
 		try:
 			new_squad[x] = int(input('Call player %s (current: %s, enter to confirm): '%(str(x+1), directory[already[x]])))
 		except ValueError as e:
-			if str(e)[-2] == 'c': 
+			if str(e)[-2] == 'c':
 				cancelled = True
 				break
 			elif str(e)[-5:-1] == 'auto':
@@ -2362,7 +2615,7 @@ def convoca(team_data, *lax, **kwargs):
 	while True:
 		if not None in new_squad: break
 		new_squad.remove(None)
-	if cancelled: 
+	if cancelled:
 		print('Cancelled by user')
 		return
 	print('\n'+str(len(new_squad)), 'players selected\n')
@@ -2374,7 +2627,7 @@ def convoca(team_data, *lax, **kwargs):
 		if auto_tactics:
 			edit_team(kwargs['t'], value=tactics.index(auto_tactics), field='t')
 		return bytes(new_squad)
-	
+
 def show_leagues(**kwargs):
 	columns = 4
 	lines_side = columns * [0]
@@ -2459,7 +2712,7 @@ def show_leagues(**kwargs):
 						temp_file += valori.read()
 						save(f_valori, temp_file)
 						load_database()
-						for _,n in enumerate(sw_name):	
+						for _,n in enumerate(sw_name):
 							if len(nn:=n['names']) == 2: sw_name[_]['names'] = [nn[0][:5],nn[1][:10],nn[1]]
 							elif len(nn) == 1: sw_name[_]['names'] = [nn[0][:5],nn[0][:10],nn[0]]
 						edit_team(sw_name[0], field="n", value = sw_name[1]['names'])
@@ -2555,7 +2808,7 @@ def edit_leagues(target):
 	output.write(tmpfl)
 	output.close()
 	load_database()
-	
+
 
 def commit():
 	print('Committing...')
@@ -2575,7 +2828,7 @@ def restore():
 	shutil.copyfile(f_interfaccia.replace(Fifapath, gamepath), f_interfaccia)
 	load_database()
 	input('Database restored. Return to main menu. ')
-	
+
 def match_day():
 	def nt_lineup(squad, tactics, player):
 		reparti = tactics.split('-')
@@ -2591,7 +2844,7 @@ def match_day():
 			final_lineup += sorted(_, reverse=True, key = lambda r: r[1])[:reparti[l]]
 		final_lineup = [_[0] for _ in final_lineup]
 		return 2 if player in final_lineup else 1
-		
+
 	import pandas as pd
 	ct = {e:sorted(league_list[:12]).index(k) for e,k in enumerate(league_list[:12])}
 	l1 = int(inputPlus('\nSelect league of team 1:\n  $OPTIONLIST_l$$CANCEL$',	sorted_leagues_names+['National Teams'], c=True, sep='\n  ')[0])
@@ -2703,7 +2956,7 @@ def match_day():
 		rows.append(row)
 	for e,i in enumerate(table1):
 		if e < len(rows)-1:
-			continue 
+			continue
 		else:
 			row = []
 			row.append('   ')
@@ -2832,7 +3085,7 @@ def list_by_role():
 	role_carousel = ['GK','RB','CB','SW','LB','RM','CM','LM','RF','CF','LF']
 	starting_pos = 0
 	starting_page = 0
-	
+
 	by_role_pages = {}
 	for role,pls in by_role.items():
 		tmp = [' ']
@@ -2844,7 +3097,7 @@ def list_by_role():
 				if e == len(pls) - 1: tmp.append(maxW*'━')
 				by_role_pages.setdefault(role,[]).append(tmp)
 				tmp = []
-	
+
 	def capture():
 		if platform.system() != 'Windows':
 			fd = sys.stdin.fileno()
@@ -2865,7 +3118,7 @@ def list_by_role():
 
 	def find_key():
 		command = False
-		while True:		
+		while True:
 			k = getter()
 			if platform.system() != 'Windows':
 				if k == 27:
@@ -2898,13 +3151,13 @@ def list_by_role():
 						return(chr(k))
 						command = False
 						break
-	
+
 	def print_list(role,page):
 		os.system(clear_screen)
-		
+
 		print(f' {dict(GK="Goalkeepers", LB="Left Backs", CB="Centre Backs", SW="Sweepers", RB="Right Backs",LM="Left Midfielders", CM="Central Midfielders", RM="Right Midfielders",LF="Left Forwards", CF="Central Forwards", RF="Right Forwards")[role]} ({page+1}/{len(by_role_pages[role])}) '.center(maxW,'━'))
 		print('\n'.join(by_role_pages[role][page]))
-		
+
 	while True:
 		print_list(role_carousel[starting_pos],starting_page)
 		print('\n',f'Left for {role_carousel[len(role_carousel) -1 if starting_pos - 1 < 0 else starting_pos -1]}, right for {role_carousel[0 if starting_pos + 1 == len(role_carousel) else starting_pos + 1]}, up/down to scroll the list, type "q" to quit', end='\r')
@@ -2925,7 +3178,7 @@ def list_by_role():
 			if starting_page < len(by_role_pages[role_carousel[starting_pos]])-1:
 				starting_page += 1
 	return
-	
+
 def initialize():
 	def start_search():
 		global sf
@@ -3006,7 +3259,7 @@ def inputPlus(message, valid_options, **params):
 		if delimiter and delimiter in option:
 			option = (args:=option.split(delimiter))[0]
 			if len(param := args[1]) == 0: continue
-		if option in valid_options: 
+		if option in valid_options:
 			if not param is None:
 				if param in valid_params: break
 				else: continue
@@ -3056,13 +3309,65 @@ def ch_lang(**kwargs):
 		restore()
 	else: return lval[nf]
 
+def show_all_kits():
+	if os.path.isdir(os.path.join(gamepath.replace('common','ingame'),'PLAYER','TEXTURES','PLYRKITS')):
+		jerseys = [_ for _ in os.listdir(os.path.join(gamepath.replace('common','ingame'),'PLAYER','TEXTURES','PLYRKITS')) if re.match('jers\d\d.fsh',_.lower())]
+		root = tk.Tk()
+		root.title('Select jersey')
+		root.geometry("800x600+0+0")
+		#Code from Codemy
+		# Create A Main Frame
+		main_frame = Frame(root)
+		main_frame.pack(fill="both", expand=1)
+
+		# Create A Canvas
+		my_canvas = tk.Canvas(main_frame)
+		my_canvas.pack(side="left", fill="both", expand=1)
+
+		# Add A Scrollbar To The Canvas
+		my_scrollbar = Scrollbar(main_frame, orient="vertical", command=my_canvas.yview)
+		my_scrollbar.pack(side="right", fill="y")
+
+		# Configure The Canvas
+		my_canvas.configure(yscrollcommand=my_scrollbar.set)
+		my_canvas.bind('<Configure>', lambda e: my_canvas.configure(scrollregion = my_canvas.bbox("all")))
+
+		# Create ANOTHER Frame INSIDE the Canvas
+		second_frame = Frame(my_canvas)
+
+		# Add that New frame To a Window In The Canvas
+		my_canvas.create_window((0,0), window=second_frame, anchor="nw")
+		images = []
+		def callback(n):
+			n = int(n['text'])
+			n = sorted(teams, key=lambda x: x['names'][-1])[n]
+			root.destroy()
+			if platform.system() == 'Darwin': os.system('''/usr/bin/osascript -e 'tell app "Finder" to set frontmost of process "Terminal" to true' ''')
+			edit_team(n,field='fs')
+		def on_closing(event):
+			if event.widget == root:
+				if platform.system() == 'Darwin': os.system('''/usr/bin/osascript -e 'tell app "Finder" to set frontmost of process "Terminal" to true' ''')
+		root.bind("<Destroy>", on_closing)
+		for e,t in enumerate(sorted(teams, key=lambda x: x['names'][-1])):
+			j = jersey_types.index(t['first shirt'])
+			k = showJersey(j,'front',t['first shirt - colour 1'],t['first shirt - colour 2'],t['first shirt - colour 3'],t['first shorts - colour 1'],t['first shorts - colour 2'],t['first socks - colour 1'],t['first socks - colour 2'])
+			n = t['names'][-1]
+			images.append(ImageTk.PhotoImage(k))
+			kd = tk.Button(second_frame, text = e, image = images[-1])
+			kn = Label(second_frame,text=n)
+			kd['command'] = lambda b=kd: callback(b)
+			kd.grid(row=int(e*2/6)*2, column=e%3, padx=10, pady=10)
+			kn.grid(row=int(e*2/6)*2+1, column=e%3, padx=10, pady=0)
+		root.attributes("-topmost", True)
+		root.mainloop()
+
 def main_menu():
 	os.system(clear_screen)
 	global case_sensitive
 	commands = [
 		('Show/edit leagues','os.system(clear_screen);show_leagues()'),
 		('Search/edit team(s)','os.system(clear_screen);global debug, jerseys; jerseys = False; debug = False; show_teams()'),
-		('Search/edit team(s), display jerseys','os.system(clear_screen);global jerseys, debug; jerseys = True; debug = False; show_teams()'),
+		('Show/edit all first jerseys','show_all_kits()'),
 		('Search/edit player(s), list view','os.system(clear_screen);global table, debug; table = False; debug = False; initialize()'),
 		('Search/edit player(s), table view','os.system(clear_screen);global table, debug; table = True; debug = False; initialize()'),
 		('Add player to database','os.system(clear_screen);add_player(True)'),
@@ -3126,16 +3431,19 @@ Displays lists of teams in each national league in a 4-column layout.
 \033[30C------ SEARCH/EDIT TEAMS ------
 
 Search for a team by its name. If more than one team is found, each team is displayed se-
-quentially. The command [n] moves on to the next team, while [c]ancel returns to the main 
-menu. The command [e] lets the user edit the team. [s] loads the list of all players in the
-team from which data for each player can be accessed (displayed as in FORM VIEW). When a
-player's file is loaded, [r] returns to the team file, while [s] reloads the list of pla-
-yers and [c] returns to the main menu.
+quentially. The command [n] moves on to the next team, while [c]ancel returns to the main
+menu. The command [e] lets the user edit the team. [k] shows a rendering of the team's ho-
+me and away kits in a new window. [s] loads the list of all players in the team from which
+data for each player can be accessed (displayed as in FORM VIEW). When a player's file is
+loaded, [r] returns to the team file, while [s] reloads the list of players and [c] returns
+to the main menu.
 
 Notes:
 
-(1) In the squad list, players are ordered by average (which is displayed together
-with their role).
+(1) In the squad list, players are ordered by average (which is displayed together with
+their role) unless a proper lineup is created in the editor. If a lineup was selected,
+players are listed by role (Goalkeeper, Sweeper if any, Defenders right to left, Midfielders
+r->l, Forwards r->l).
 (2) If the number of players in the team is smaller than the size of the
 roster for that team in the database, the current number of players is displayed in bra-
 ckets next to the value for 'Roster Size'. If this happens, the last player in the team
@@ -3176,9 +3484,10 @@ Notes on editing commands:
 
 """,
 """
-\033[21C------ SEARCH/EDIT TEAMS, DISPLAY JERSEYS ------
+\033[30C------ SHOW/EDIT ALL FIRST JERSEYS ------
 
-Same as search/edit teams, but a text-mode rendition of jerseys is displayed.
+Displays a window with the first jerseys of all the teams. Clicking each jersey opens a new
+window that enables the user to choose a different jersey for the corresponding team.
 
 """,
 """
@@ -3241,7 +3550,7 @@ When editing the role of a player, it will be possible to select roles that are 
 in the in-game editor: LCB, RCB, LCM, RCM. These roles specify if a player must be the left
 or right centre back if team tactics have an odd number of defenders (3-5-2, 5-3-2, 3-4-3,
 5-4-1). For 4-5-1, LCB selects the centre back, while CB selects the sweeper. LCM and RCM
-do the same job for tactics where midfielders are in odd number (4-3-3, 5-3-2, 3-5-2). 
+do the same job for tactics where midfielders are in odd number (4-3-3, 5-3-2, 3-5-2).
 NB: These roles only apply to players in the starting lineup.
 
 ""","""
@@ -3375,7 +3684,7 @@ Discard all unsaved changes and restore the database currently used in the game.
 	else: view = False
 	if not view: print('\nNo help entry for the selected option')
 	input('Return to main menu ')
-	
+
 #start
 os.system(clear_screen)
 if platform.system() == 'Darwin':
@@ -3397,7 +3706,7 @@ if not gamepath: sys.exit()
 
 lang = ch_lang(wait=True) if lang == '' else lang
 if not lang: sys.exit()
-	
+
 filenames = ["FCDBPENG.DBI","FCDB.DBI","FCDB_%s.DBI"%lang,"FC%s.BIN"%lang]
 
 Fifapath = os.path.dirname(os.path.realpath(__file__))+'/FifaDb'
@@ -3405,7 +3714,7 @@ if not os.path.isdir(Fifapath):
 	print('Initializing...')
 	os.mkdir(Fifapath)
 	restore()
-	
+
 f_nomi, f_valori, f_squadre, f_interfaccia = ["%s/%s"%(Fifapath,fn) for fn in filenames]
 if sum([fn in os.listdir(Fifapath) for fn in filenames]) < len(filenames): restore()
 else:
