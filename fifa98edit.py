@@ -57,7 +57,7 @@ def showJersey(jersey,side,je1,je2,je3,sh1,sh2,so1,so2):
 	sleeve_data.seek(4136)
 	vertical_sleeve = sleeve_data.read(64*46)
 	sleeve = horizontal_sleeve if jersey in [3,4,22] else vertical_sleeve
-	sleeve = [b''.join(sleeve[i:i+12] for i in range(32,2944,64)), b''.join(sleeve[i:i+20] for i in range(44,2944,64))]
+	sleeve = [b''.join(sleeve[i:i+9] for i in range(35,2944,64)), b''.join(sleeve[i:i+20] for i in range(44,2944,64))]
 	if jersey in [2,3,4,9,14,16,17,18,21]:
 		paletteCols[9] = paletteCols[2]
 		paletteCols[10] = paletteCols[3]
@@ -77,15 +77,15 @@ def showJersey(jersey,side,je1,je2,je3,sh1,sh2,so1,so2):
 	sleeve_Colour = [[(b & 240) >> 4 for b in sleeve[0]], [(b & 240) >> 4 for b in sleeve[1]]]
 	flatColSleeve = [[paletteCols[c] for c in sleeve_Colour[0]],[paletteCols[c] for c in sleeve_Colour[1]]]
 	deepColSleeve = [[(a,b,int(c*sleeve_Monochrome[0][e]/15)) for e,(a,b,c) in enumerate(flatColSleeve[0])],[(a,b,int(c*sleeve_Monochrome[1][e]/15)) for e,(a,b,c) in enumerate(flatColSleeve[1])]]
-	sleeveTopImg = Image.new('HSV', (12,46), "white")
+	sleeveTopImg = Image.new('HSV', (9,46), "white")
 	sleeveTopImg.putdata(deepColSleeve[0])
-	sleeveTopImg = sleeveTopImg.resize((28,46),resample=Image.NEAREST)
+	sleeveTopImg = sleeveTopImg.resize((20,46),resample=Image.NEAREST)
 	sleeveBottomImg = Image.new('HSV', (20,46), "white")
 	sleeveBottomImg.putdata(deepColSleeve[1])
-	sleeveBottomImg = sleeveBottomImg.resize((18,46),resample=Image.NEAREST)
+	sleeveBottomImg = sleeveBottomImg.resize((26,46),resample=Image.NEAREST)
 	sleeveImg = Image.new('HSV', (46,46), "white")
 	sleeveImg.paste(sleeveTopImg,(0,0))
-	sleeveImg.paste(sleeveBottomImg,(28,0))
+	sleeveImg.paste(sleeveBottomImg,(20,0))
 	leftSleeve = sleeveImg.rotate(285,expand=1,fillcolor=(0,0,209))
 	rightSleeve = sleeveImg.rotate(105,expand=1,fillcolor=(0,0,209)).transpose(method=Image.FLIP_TOP_BOTTOM)
 	chest = Image.new('HSV', (128,128), "white")
@@ -1800,7 +1800,7 @@ def recommended_tactics(squad, **kwargs):
 	possible_lineups = {
 			'5-4-1': [['GK','RB',('CB','RCB'),('SW','CB'),('CB','LCB'),'LB','RM',('CM','RCM'),('CM','LCM'),'LM',('CF','RF','LF')]],
 			'5-3-2':[['GK','RB',('CB','RCB'),('SW','CB'),('CB','LCB'),'LB',('CM','RCM'),'CM',('CM','LCM'),('CF','RF','LF'),('CF','RF','LF')]],
-			'4-5-1':[['GK','RB',('CB','RCB'),('CB','LCB'),'LB','RM',('CM','RCM'),'CM',('CM','LCM'),'LM',('CF','RF','LF')]],
+			'4-5-1':[['GK',('CB','RCB'),'SW','CB',('CB','LCB'),'RM',('CM','RCM'),'CM',('CM','LCM'),'LM',('CF','RF','LF')]],
 			'1-3-4-2':[['GK',('SW','CB'),'RB','CB','LB','RM',('CM','RCM'),('CM','LCM'),'LM',('CF','RF','LF'),('CF','RF','LF')]],
 			'1-3-3-3':[['GK',('SW','CB'),'RB','CB','LB',('CM','RCM'),'CM',('CM','LCM'),('CF','RF','LF'),('CF','RF','LF'),('CF','RF','LF')]],
 			'4-4-2':[['GK','RB',('CB','RCB'),('CB','LCB'),'LB','RM',('CM','RCM'),('CM','LCM'),'LM',('CF','RF','LF'),('CF','RF','LF')]],
@@ -1921,9 +1921,9 @@ Parameter to edit:
 		if what_to_edit == 'l':
 			roster = [(p['name'],p['role'],p['index_fcdb'],p['average']) for p in players if (p['team_id'] == vals_already['db_position']) or (vals_already.get('nation','') in p['international_id'])]
 			reparti = vals_already['tactics']
-			if reparti == '5-4-1': reparti = ['GK','RB',('CB','RCB'),'SW',('CB','LCB'),'LB','RM',('CM','RCM'),('CM','LCM'),'LM','F']
-			if reparti == '5-3-2': reparti = ['GK','RB',('CB','RCB'),'SW',('CB','LCB'),'LB',('CM','RCM'),'CM',('CM','LCM'),'F','F']
-			if reparti == '4-5-1': reparti = ['GK','RB',('CB','RCB'),('CB','LCB'),'LB','RM',('CM','RCM'),'CM',('CM','LCM'),'LM','F']
+			if reparti == '5-4-1': reparti = ['GK','RB',('CB','RCB'),'CB',('CB','LCB'),'LB','RM',('CM','RCM'),('CM','LCM'),'LM','F']
+			if reparti == '5-3-2': reparti = ['GK','RB',('CB','RCB'),'CB',('CB','LCB'),'LB',('CM','RCM'),'CM',('CM','LCM'),'F','F']
+			if reparti == '4-5-1': reparti = ['GK',('CB','RCB'),'SW','CB',('CB','LCB'),'RM',('CM','RCM'),'CM',('CM','LCM'),'LM','F']
 			if reparti == '1-3-4-2': reparti = ['GK','SW','RB','CB','LB','RM',('CM','RCM'),('CM','LCM'),'LM','F','F']
 			if reparti == '1-3-3-3': reparti = ['GK','SW','RB','CB','LB',('CM','RCM'),'CM',('CM','LCM'),('F','RF'),('F','CF'),('F','LF')]
 			if reparti == '4-4-2': reparti = ['GK','RB',('CB','RCB'),('CB','LCB'),'LB','RM',('CM','RCM'),('CM','LCM'),'LM','F','F']
@@ -1947,7 +1947,7 @@ Parameter to edit:
 				for x in roster:
 					edit_player(x[2], field='st', value=None)
 				for x,r in lineup.items():
-					edit_player(x, field='st', value=180, role=r)
+					edit_player(x, field='st', value=180, role=r if isinstance(r,str) else r[-1])
 				load_database()
 		elif what_to_edit in ['buy', 'sell', 'x', 'rel']:
 			source_pl, dest_tm, dest_lg = None, None, None
@@ -3311,6 +3311,14 @@ def ch_lang(**kwargs):
 
 def show_all_kits():
 	if os.path.isdir(os.path.join(gamepath.replace('common','ingame'),'PLAYER','TEXTURES','PLYRKITS')):
+		while True:
+			try:
+				wh = {'h':'first','a':'second','c':'c'}[input('\r\033[KShow [h]ome or [a]way jerseys ([c]ancel)? ')]
+				if wh == 'c': return
+				break
+			except:
+				pass
+		print('\033[1A\033[KLoading jerseys...')
 		jerseys = [_ for _ in os.listdir(os.path.join(gamepath.replace('common','ingame'),'PLAYER','TEXTURES','PLYRKITS')) if re.match('jers\d\d.fsh',_.lower())]
 		root = tk.Tk()
 		root.title('Select jersey')
@@ -3343,14 +3351,15 @@ def show_all_kits():
 			n = sorted(teams, key=lambda x: x['names'][-1])[n]
 			root.destroy()
 			if platform.system() == 'Darwin': os.system('''/usr/bin/osascript -e 'tell app "Finder" to set frontmost of process "Terminal" to true' ''')
-			edit_team(n,field='fs')
+			edit_team(n,field='fs' if wh == 'first' else 'ss')
+			load_database()
 		def on_closing(event):
 			if event.widget == root:
 				if platform.system() == 'Darwin': os.system('''/usr/bin/osascript -e 'tell app "Finder" to set frontmost of process "Terminal" to true' ''')
 		root.bind("<Destroy>", on_closing)
 		for e,t in enumerate(sorted(teams, key=lambda x: x['names'][-1])):
 			j = jersey_types.index(t['first shirt'])
-			k = showJersey(j,'front',t['first shirt - colour 1'],t['first shirt - colour 2'],t['first shirt - colour 3'],t['first shorts - colour 1'],t['first shorts - colour 2'],t['first socks - colour 1'],t['first socks - colour 2'])
+			k = showJersey(j,'front',t[f'{wh} shirt - colour 1'],t[f'{wh} shirt - colour 2'],t[f'{wh} shirt - colour 3'],t[f'{wh} shorts - colour 1'],t[f'{wh} shorts - colour 2'],t[f'{wh} socks - colour 1'],t[f'{wh} socks - colour 2'])
 			n = t['names'][-1]
 			images.append(ImageTk.PhotoImage(k))
 			kd = tk.Button(second_frame, text = e, image = images[-1])
@@ -3367,7 +3376,7 @@ def main_menu():
 	commands = [
 		('Show/edit leagues','os.system(clear_screen);show_leagues()'),
 		('Search/edit team(s)','os.system(clear_screen);global debug, jerseys; jerseys = False; debug = False; show_teams()'),
-		('Show/edit all first jerseys','show_all_kits()'),
+		('Show/edit all jerseys','show_all_kits()'),
 		('Search/edit player(s), list view','os.system(clear_screen);global table, debug; table = False; debug = False; initialize()'),
 		('Search/edit player(s), table view','os.system(clear_screen);global table, debug; table = True; debug = False; initialize()'),
 		('Add player to database','os.system(clear_screen);add_player(True)'),
@@ -3484,9 +3493,9 @@ Notes on editing commands:
 
 """,
 """
-\033[30C------ SHOW/EDIT ALL FIRST JERSEYS ------
+\033[30C------ SHOW/EDIT ALL JERSEYS ------
 
-Displays a window with the first jerseys of all the teams. Clicking each jersey opens a new
+Displays a window with the jerseys of all the teams. Clicking each jersey opens a new
 window that enables the user to choose a different jersey for the corresponding team.
 
 """,
@@ -3549,8 +3558,8 @@ The distribution can be biased manually by attaching special flags to the desire
 When editing the role of a player, it will be possible to select roles that are not there
 in the in-game editor: LCB, RCB, LCM, RCM. These roles specify if a player must be the left
 or right centre back if team tactics have an odd number of defenders (3-5-2, 5-3-2, 3-4-3,
-5-4-1). For 4-5-1, LCB selects the centre back, while CB selects the sweeper. LCM and RCM
-do the same job for tactics where midfielders are in odd number (4-3-3, 5-3-2, 3-5-2).
+5-4-1). LCM and RCM do the same job for tactics where midfielders are in odd number (4-3-3,
+5-3-2, 3-5-2). For 5-3-2 and 5-4-1, CB (not SW!) selects the sweeper.
 NB: These roles only apply to players in the starting lineup.
 
 ""","""
