@@ -22,8 +22,14 @@ import json
 import unidecode
 
 hslCols = [(242,165,237),(2,206,170),(7,216,107),(19,201,239),(17,234,224),(12,242,163),(34,237,239),(28,219,232),(24,224,170),(83,175,196),(85,226,142),(97,214,99),(145,181,196),(156,178,165),(166,170,147),(174,201,114),(197,160,209),(211,188,140),(188,168,142),(0,2,244),(0,2,226),(127,7,160),(0,0,40)]
-
-def showJersey(jersey,side,je1,je2,je3,sh1,sh2,so1,so2):
+color_selector = []
+for color in hslCols:
+	img = Image.new('HSV', (20,20), color)
+	color_selector.append(img)
+def showJersey(jersey,side,shorts_type,sock_type,je1,je2,je3,sh1,sh2,so1,so2):
+	global socks, shorts
+	sock_type = socks.index(sock_type)
+	shorts_type = shorts.index(shorts_type)
 	paletteCols = [
 		(0,0,0),
 		(0,0,0),
@@ -90,10 +96,63 @@ def showJersey(jersey,side,je1,je2,je3,sh1,sh2,so1,so2):
 	rightSleeve = sleeveImg.rotate(105,expand=1,fillcolor=(0,0,209)).transpose(method=Image.FLIP_TOP_BOTTOM)
 	chest = Image.new('HSV', (128,128), "white")
 	chest.putdata(deepColside)
-	img = Image.new('RGBA', (218,128), (209,209,209))
+	if sock_type > 1:
+		sleeve_data.seek(78120) #socks, stripes
+	else:
+		sleeve_data.seek(60696) #socks, trim
+		if sock_type == 0:
+			paletteCols[8] = paletteCols[7]
+	socks_data = sleeve_data.read(128**2)
+	socks_data = b''.join(socks_data[i:i+50] for i in range(5760,128**2,128))
+	socksMonochrome = [b & 15 for b in socks_data]
+	socksColour = [(b & 240) >> 4 for b in socks_data]
+	flatColSocks = [paletteCols[c] for c in socksColour]
+	deepColSocks = [(a,b,int(c*socksMonochrome[e]/15)) for e,(a,b,c) in enumerate(flatColSocks)]
+	socksImg = Image.new('HSV', (50,83), "white")
+	socksImg.putdata(deepColSocks)
+	socksImg = socksImg.convert('RGBA').transpose(method=Image.FLIP_LEFT_RIGHT)
+	rightSock = socksImg.rotate(5,expand=1)
+	leftSock = socksImg.rotate(5,expand=1).transpose(method=Image.FLIP_LEFT_RIGHT)
+	if shorts_type > 1:
+		sleeve_data.seek(25816) #shorts, vertical
+	else:
+		sleeve_data.seek(43256) #shorts, horizontal
+		if shorts_type == 0:
+			paletteCols[6] = paletteCols[5]
+	shorts_data = sleeve_data.read(128**2)
+	shorts_data = b''.join(shorts_data[i:i+64] for i in range(45,10240,128))
+	shortsMonochrome = [b & 15 for b in shorts_data]
+	shortsColour = [(b & 240) >> 4 for b in shorts_data]
+	flatColShorts = [paletteCols[c] for c in shortsColour]
+	deepColShorts = [(a,b,int(c*shortsMonochrome[e]/15)) for e,(a,b,c) in enumerate(flatColShorts)]
+	fullShorts = []
+	for _ in range(0,5120,64):
+		fullShorts += deepColShorts[_:_+64] + deepColShorts[_:_+64][::-1]
+	shortsImg = Image.new('HSV', (128,80), "white")
+	shortsImg.putdata(fullShorts)
+	shortsImg = shortsImg.convert('RGBA')
+	def find_coeffs(pa, pb):
+		matrix = []
+		for p1, p2 in zip(pa, pb):
+			matrix.append([p1[0], p1[1], 1, 0, 0, 0, -p2[0]*p1[0], -p2[0]*p1[1]])
+			matrix.append([0, 0, 0, p1[0], p1[1], 1, -p2[1]*p1[0], -p2[1]*p1[1]])
+
+		A = numpy.matrix(matrix, dtype=numpy.float)
+		B = numpy.array(pb).reshape(8)
+
+		res = numpy.dot(numpy.linalg.inv(A.T * A) * A.T, B)
+		return numpy.array(res).reshape(8)
+	coeffs = find_coeffs(
+        [(8, 0), (120, 0), (128, 80), (0, 80)],
+        [(0, 0), (128, 0), (128, 80), (0, 80)])
+	shortsImg=shortsImg.transform((128,80),Image.PERSPECTIVE,coeffs,Image.BICUBIC)
+	img = Image.new('RGBA', (218,208), (209,209,209))
 	img.paste(leftSleeve, (0,0))
 	img.paste(rightSleeve, (160,0))
 	img.paste(chest,(45,0))
+	img.paste(shortsImg,(45,128))
+	img.paste(leftSock,(-30,128),leftSock)
+	img.paste(rightSock,(183,128),rightSock)
 	mask = Image.open("jersey_mask.png")
 	img.paste(mask, (0,0), mask=mask)
 	return img
@@ -1675,8 +1734,8 @@ def _display_team(params, **kwargs):
 				kitWindow.title(f'{t["names"][-1]}: home/away jerseys')
 				kitWindow.bind("<Destroy>", on_closing)
 				kitWindow.attributes("-topmost", True)
-				homeKit = showJersey(jersey_types.index(teams[idx]['first shirt']),'front',teams[idx]['first shirt - colour 1'],teams[idx]['first shirt - colour 2'],teams[idx]['first shirt - colour 3'],teams[idx]['first shorts - colour 1'],teams[idx]['first shorts - colour 2'],teams[idx]['first socks - colour 1'],teams[idx]['first socks - colour 2']) #NEW
-				awayKit = showJersey(jersey_types.index(teams[idx]['second shirt']),'front',teams[idx]['second shirt - colour 1'],teams[idx]['second shirt - colour 2'],teams[idx]['second shirt - colour 3'],teams[idx]['second shorts - colour 1'],teams[idx]['second shorts - colour 2'],teams[idx]['second socks - colour 1'],teams[idx]['second socks - colour 2'])
+				homeKit = showJersey(jersey_types.index(teams[idx]['first shirt']),'front',teams[idx]['first shorts'],teams[idx]['first socks'],teams[idx]['first shirt - colour 1'],teams[idx]['first shirt - colour 2'],teams[idx]['first shirt - colour 3'],teams[idx]['first shorts - colour 1'],teams[idx]['first shorts - colour 2'],teams[idx]['first socks - colour 1'],teams[idx]['first socks - colour 2']) #NEW
+				awayKit = showJersey(jersey_types.index(teams[idx]['second shirt']),'front',teams[idx]['second shorts'],teams[idx]['second socks'],teams[idx]['second shirt - colour 1'],teams[idx]['second shirt - colour 2'],teams[idx]['second shirt - colour 3'],teams[idx]['second shorts - colour 1'],teams[idx]['second shorts - colour 2'],teams[idx]['second socks - colour 1'],teams[idx]['second socks - colour 2'])
 				hkimg = ImageTk.PhotoImage(homeKit)
 				akimg = ImageTk.PhotoImage(awayKit)
 				homeKitDisplay = Label(kitWindow,image = hkimg)
@@ -2213,17 +2272,29 @@ Parameter to edit:
 				temp_file+=valori.read()
 				save(f_valori, temp_file)
 				load_database(load=len(args.get('field', '')))
-		elif what_to_edit in ['fs','ss']: #NEW
+		elif what_to_edit in ['fs','ss']:
 			kit = [0,'first'] if what_to_edit[0] == 'f' else [8,'second']
+			cols = [
+				vals_already[f'{kit[1]} shirt - colour 1'],
+				vals_already[f'{kit[1]} shirt - colour 2'],
+				vals_already[f'{kit[1]} shirt - colour 3'],
+				vals_already[f'{kit[1]} shorts - colour 1'],
+				vals_already[f'{kit[1]} shorts - colour 2'],
+				vals_already[f'{kit[1]} socks - colour 1'],
+				vals_already[f'{kit[1]} socks - colour 2']
+			]
 			if os.path.isdir(os.path.join(gamepath.replace('common','ingame'),'PLAYER','TEXTURES','PLYRKITS')):
 				jerseys = [_ for _ in os.listdir(os.path.join(gamepath.replace('common','ingame'),'PLAYER','TEXTURES','PLYRKITS')) if re.match('jers\d\d.fsh',_.lower())]
 				root = tk.Tk()
-				root.title('Select jersey')
+				root.title(f'Select {kit[1]} jersey of {vals_already["names"][-1]}')
 				root.geometry("800x600+0+0")
 				#Code from Codemy
 				# Create A Main Frame
-				main_frame = Frame(root)
+				main_frame = tk.Frame(root, bg="white")
 				main_frame.pack(fill="both", expand=1)
+				
+				top_frame = Frame(main_frame)
+				top_frame.pack(side="top",fill="both")
 
 				# Create A Canvas
 				my_canvas = tk.Canvas(main_frame)
@@ -2238,10 +2309,35 @@ Parameter to edit:
 				my_canvas.bind('<Configure>', lambda e: my_canvas.configure(scrollregion = my_canvas.bbox("all")))
 
 				# Create ANOTHER Frame INSIDE the Canvas
-				second_frame = Frame(my_canvas)
+				second_frame = tk.Frame(my_canvas, bg="white")
 
 				# Add that New frame To a Window In The Canvas
 				my_canvas.create_window((0,0), window=second_frame, anchor="nw")
+				
+				def chCol(x,y):
+					try:
+						cIndex=y
+						if cIndex != cols[x]:
+							cols[x] = cIndex
+							kcMenu[x][0].config(text=colours[y].ljust(12))
+							for e,button in enumerate(buttons):
+								images[e] = ImageTk.PhotoImage(image = showJersey(e,'front',vals_already[f'{kit[1]} shorts'],vals_already[f'{kit[1]} socks'],*cols))
+								button.config(image = images[e])
+					except:
+						pass
+				kit_colours = ["Jersey: 1","Jersey: 2","Jersey: 3","Shorts: 1","Shorts: 2","Socks: 1","Socks: 2"]
+				kcMenu = []
+				for kcn, kc in enumerate(kit_colours):
+					kcMenu.append([])
+					kcMenu[-1].append(tk.Menubutton(top_frame, text=colours[cols[kcn]].ljust(12)))
+					kcMenu[-1].append(tk.Menu(kcMenu[-1][0]))
+					for cid, color in enumerate(colours):
+						kcMenu[-1][1].add_command(label = color, compound="left", command = lambda x=cid,y=kcn: chCol(y,x), image = ImageTk.PhotoImage(image = color_selector[cid]))
+					kcMenu[-1][0]["menu"]=kcMenu[-1][1]
+					kcMenu[-1][0].grid(row=1,column=kcn,padx=5,pady=3)
+					kcMenu[-1].append(Label(top_frame,text = kc))
+					kcMenu[-1][2].grid(row=0,column=kcn, pady=3)
+
 				images = []
 				global c
 				c = None
@@ -2254,16 +2350,18 @@ Parameter to edit:
 					c = int(n['text'])
 					root.destroy()
 					if platform.system() == 'Darwin': os.system('''/usr/bin/osascript -e 'tell app "Finder" to set frontmost of process "Terminal" to true' ''')
+				buttons = []
 				for e,j in enumerate(jerseys):
-					images.append(ImageTk.PhotoImage(image = showJersey(e,'front',vals_already[f'{kit[1]} shirt - colour 1'],vals_already[f'{kit[1]} shirt - colour 2'],vals_already[f'{kit[1]} shirt - colour 3'],vals_already[f'{kit[1]} shorts - colour 1'],vals_already[f'{kit[1]} shorts - colour 2'],vals_already[f'{kit[1]} socks - colour 1'],vals_already[f'{kit[1]} socks - colour 2'])))
+					images.append(ImageTk.PhotoImage(image = showJersey(e,'front',vals_already[f'{kit[1]} shorts'],vals_already[f'{kit[1]} socks'],*cols)))
 					btn = tk.Button(second_frame, text = e, image = images[-1])
+					buttons.append(btn)
 					if e == jersey_types.index(vals_already[f'{kit[1]} shirt']):
 						btn['highlightthickness']=4
 						btn['highlightcolor']="#37d3ff"
 						btn['highlightbackground']="#37d3ff"
 						btn['borderwidth']=4
 					btn['command'] = lambda b=btn: callback(b)
-					btn.grid(row=int(e/3), column=e%3, padx=10, pady=10)
+					btn.grid(row=int(e/3)+1, column=e%3, padx=10, pady=10)
 				root.attributes("-topmost", True)
 				root.mainloop()
 				if new_value is None:
@@ -2277,6 +2375,18 @@ Parameter to edit:
 				if new_value is None: new_value = int(inputPlus('\nEnter shirt type %s$CANCEL$'%addtypes,jersey_types,c=True,sep="\n\t")[0])
 			if new_value < len(jersey_types):
 				temp_bytes[5+kit[0]] = bytes([(int.from_bytes(temp_bytes[5+kit[0]], 'big') & 3)+ (new_value << 2)])
+				#jec
+				temp_bytes[4+kit[0]] = bytes([((cols[1] & 7) << 5) + cols[0]])
+				temp_bytes[5+kit[0]] = bytes([(int.from_bytes(temp_bytes[5+kit[0]], 'big') & 252) + ((cols[1] & 24) >> 3)])
+				temp_bytes[6+kit[0]] = bytes([(int.from_bytes(temp_bytes[6+kit[0]], 'big') & 224) + cols[2]])
+				#shc
+				temp_bytes[6+kit[0]] = bytes([(int.from_bytes(temp_bytes[6+kit[0]], 'big') & 31) + ((cols[3] & 7) << 5)])
+				temp_bytes[7+kit[0]] = bytes([(int.from_bytes(temp_bytes[7+kit[0]], 'big') & 252) + ((cols[3] & 24) >> 3)])
+				temp_bytes[8+kit[0]] = bytes([(int.from_bytes(temp_bytes[8+kit[0]], 'big') & 224) + cols[4]])
+				#soc
+				temp_bytes[8+kit[0]] = bytes([(int.from_bytes(temp_bytes[8+kit[0]], 'big') & 31) + ((cols[5] & 7) << 5)])
+				temp_bytes[9+kit[0]] = bytes([(int.from_bytes(temp_bytes[9+kit[0]], 'big') & 252) + ((cols[5] & 24) >> 3)])
+				temp_bytes[10+kit[0]] = bytes([(int.from_bytes(temp_bytes[10+kit[0]], 'big') & 224) + cols[6]])
 				temp_file+=b''.join(temp_bytes)
 				temp_file+=valori.read()
 				save(f_valori, temp_file)
@@ -3359,7 +3469,7 @@ def show_all_kits():
 		root.bind("<Destroy>", on_closing)
 		for e,t in enumerate(sorted(teams, key=lambda x: x['names'][-1])):
 			j = jersey_types.index(t['first shirt'])
-			k = showJersey(j,'front',t[f'{wh} shirt - colour 1'],t[f'{wh} shirt - colour 2'],t[f'{wh} shirt - colour 3'],t[f'{wh} shorts - colour 1'],t[f'{wh} shorts - colour 2'],t[f'{wh} socks - colour 1'],t[f'{wh} socks - colour 2'])
+			k = showJersey(j,'front',t[f'{wh} shorts'],t[f'{wh} socks'],t[f'{wh} shirt - colour 1'],t[f'{wh} shirt - colour 2'],t[f'{wh} shirt - colour 3'],t[f'{wh} shorts - colour 1'],t[f'{wh} shorts - colour 2'],t[f'{wh} socks - colour 1'],t[f'{wh} socks - colour 2'])
 			n = t['names'][-1]
 			images.append(ImageTk.PhotoImage(k))
 			kd = tk.Button(second_frame, text = e, image = images[-1])
