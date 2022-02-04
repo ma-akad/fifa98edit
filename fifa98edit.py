@@ -3439,6 +3439,7 @@ def general_list():
 	input('Return to main menu ')
 
 def export_database(): 
+	print('Preparing data...')
 	complete_db = {'leagues':[],'non-league teams':[],'teamless players':[]}
 	for l in leagues:
 		complete_db['leagues'].append(l)
@@ -3471,6 +3472,8 @@ def export_database():
 		if p['id'] not in teamPlayers:
 			complete_db['teamless players'].append(p)
 	print(json.dumps(complete_db,indent=2),file=open('complete_db.json','w+'))
+	input('The data has been saved. Hit enter to return to the main menu.')
+	load_database()
 
 def list_by_role():
 	maxL = os.get_terminal_size().lines
