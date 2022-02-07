@@ -3449,14 +3449,14 @@ def export_database():
 		tmptms = []
 		for t in teams:
 			if t['id'] in l['teams']:
-				tmptms.append(t)
+				tmptms.append({**t})
 				leagueTeams.append(t['id'])
 		l['teams'] = tmptms
 		for t in l['teams']:
 			tmpsq = []
 			for p in players:
 				if p['id'] in t['squad']:
-					tmpsq.append(p)
+					tmpsq.append({**p})
 					teamPlayers.append(p['id'])
 			t['squad'] = tmpsq
 	for t in teams:
