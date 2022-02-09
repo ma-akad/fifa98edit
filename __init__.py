@@ -1991,12 +1991,12 @@ def _display_team(params, **kwargs):
 				standard_query = team_data_query
 				plnames = [_[0] for _ in sorted(rt['pl_list'], key=lambda w:w[0])]
 				plindexes = [_[-2] for _ in sorted(rt['pl_list'], key=lambda w:w[0])] + ['cancel']
-				plindex = plindexes[(int(inputPlus('\nSelect Player:\n  $OPTIONLIST_l$$CANCEL$', plnames, c=True, sep='\n  ')[0]))]
+				plindex = plindexes[int(inputPlus('\nSelect Player:\n  $OPTIONLIST_l$$CANCEL$', plnames, c=True, sep='\n  ')[0])]
 				if plindex == 'cancel':
 					team_data_query = 'return'
 					break
 				os.system(clear_screen)
-				for _ in search_players(plid, 'index_fcdb', index=plindex)['files'][plindex]: exec(_)
+				for _ in search_players(plindex, 'index_fcdb')['files'][plindex]: exec(_)
 			elif k == 'n':
 				print('\033[2A')
 				print('\033[J', end="")
