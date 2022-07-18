@@ -12,10 +12,10 @@ If your system runs multiple versions of Python (e.g. Python 2 on many Macs) run
 
     pip3 install fifa98edit
 
-If you wish to upgrade to a new version, run:
+If you wish to update to a new version, run:
 
 
-    pip3 install --upgrad fifa98edit
+    pip3 install --upgrade fifa98edit
 
 
 ## Use
