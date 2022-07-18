@@ -274,7 +274,7 @@ case_sensitive = False
 lang = [None]
 gamepath = ['']
 what_to_edit = None
-decomp_path = [""]
+decomp_path = []
 
 #platform-specific settings
 if platform.system() == 'Windows':
@@ -4024,6 +4024,7 @@ def add_tmmng_to_sav():
 def read_tmmng(*arg,**kwargs):
 	global decomp_path, tmmng_db
 	t_verbose = kwargs.get('verbose',False)
+	tmmng = gamepath.replace("common","user")+"/tmmng.db"
 	currdir = os.getcwd()
 	if kwargs.get('refresh',None) or not os.path.isfile(f'{Fifapath}/tmmng.dec'):
 		if platform.system() != 'Windows': return
