@@ -336,7 +336,6 @@ jerseys = [
 ]
 
 custom_vals = json.loads(open('fifa_config.json', 'r').read())
-		
 gamepath = custom_vals['gamepath'][0]
 
 for f in os.listdir(j_dir:=os.path.join(gamepath.replace('common','ingame'),'PLAYER','TEXTURES','PLYRKITS')):

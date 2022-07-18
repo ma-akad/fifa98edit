@@ -12,9 +12,11 @@ import shutil
 import platform
 import random
 import numpy
+import io
 import copy
 from average_fifa import *
 from functools import reduce
+import functools
 import tkinter as tk
 from tkinter.ttk import *
 from PIL import Image, ImageTk
@@ -126,16 +128,16 @@ def showJersey(jersey,side,shorts_type,sock_type,je1,je2,je3,sh1,sh2,so1,so2):
 	if jersey in [2,3,4,9,14,16,17,18,21]:
 		paletteCols[9] = paletteCols[2]
 		paletteCols[10] = paletteCols[3]
-	if jersey in [19,20]:
+	elif jersey in [19,20,39,49]:
 		paletteCols[9] = paletteCols[3]
 		paletteCols[10] = paletteCols[2]
-	if jersey == 22:
+	elif jersey == 22:
 		paletteCols[9] = paletteCols[2]
 		paletteCols[10] = paletteCols[4]
-	if jersey in [0,1,6,7,8,10,11,12,13,15,23,24,25,26,27,29,30,31,32] or jersey > 32:
+	elif jersey in [0,1,6,7,8,10,11,12,13,15,23,24,25,26,27,29,30,31,32] or jersey > 32:
 		paletteCols[9] = paletteCols[2]
 		paletteCols[10] = paletteCols[2]
-	if jersey in [5,28]:
+	elif jersey in [5,28]:
 		paletteCols[9] = paletteCols[3]
 		paletteCols[10] = paletteCols[3]
 	sleeve_Monochrome =  [[b & 15 for b in sleeve[0]],[b & 15 for b in sleeve[1]]]
@@ -267,10 +269,12 @@ def colorize_feats(filename, colour):
 jerseys = False
 debug = False
 table = False
+tableSort = 'Name'
 case_sensitive = False
 lang = [None]
 gamepath = ['']
 what_to_edit = None
+decomp_path = [""]
 
 #platform-specific settings
 if platform.system() == 'Windows':
@@ -307,7 +311,6 @@ if platform.system() == 'Windows':
 	]
 else:
 	home = os.path.expanduser('~')
-	gamepath = ["/Applications/fifa98.app/Contents/Resources/drive_c/Program Files/FIFA RTWC 98/common"]
 	clear_screen = "clear && printf '\e[3J'"
 	unix = './'
 	cesc = [
@@ -344,13 +347,13 @@ hair_cl = ['blond','brown','red','BLack']
 skin_cl = ['fairer','fair','dark','darker']
 faces = ['type 1','type 2','type 3','type 4','type 5','type 6','type 7']
 beards = ['beard only','mouche','moustache','three-day','full','goatee','clean']
-hairs = ['afro','receding','tidy','high fade','curly','long back','parted','long front','monk','machine cut','bald/shaven']
+hairs = ['afro','receding','tidy','high fade','curly','long back','parted','long front','flat','machine cut','bald/shaven']
 
 league_sizes = list(range(2,31)) 
 league_interface = [688,929,340,790,1647,1142,1834,1014,818,1489,1714] 
+setpiece = ['CKL','CKR','FK','PK','PK1','PK2','PK3','PK4','PK5']
 
-nation_codes = {0: 'n/a', 1: 8, 2: 12, 3: 39, 16: 44, 17: 46, 18: 64, 19: 342, 32: 343, 33: 344, 34: 50, 35: 19, 48: 15, 49: 29, 50: 48, 51: 14, 64: 53, 65: 35, 66: 65, 67: 23, 80: 201, 81: 11, 82: '(Serbia)', 83: 299, 96: 9, 97: 52, 98: 43, 99: 41, 112: 305, 113: 202, 114: 18, 115: 306, 128: 330, 129: 331, 130: 332, 131: 333, 144: 10, 145: 25, 146: 17, 147: 16, 160: 38, 161: 191, 162: 24, 163: 278, 176: 193, 177: 20, 178: 345, 179: 47, 192: 40, 193: 28, 194: 13, 195: 37, 208: 63, 209: 298, 210: 208, 211: 285, 224: 275, 225: 27, 226: 30, 227: 273, 240: 42, 241: 32, 242: 34, 243: 281, 256: 199, 257: 'Mali', 258: 257, 259: 194, 272: 286, 273: 288, 274: 269, 275: 66, 288: 200, 289: 302, 290: 303, 291: 49, 304: 22, 305: 307, 306: 308, 307: 309, 320: 310, 321: 311, 322: 312, 323: 313, 336: 31, 337: 314, 338: 315, 339: 316, 352: 317, 353: 318, 354: 319, 355: 320, 368: 26, 369: 21, 370: 321, 371: 322, 384: 323, 385: 196, 386: 45, 387: 324, 400: 325, 401: 326, 402: 327, 403: 328, 416: 329, 417: 241, 418: 243, 419: 237, 432: 242, 433: 244, 434: 239, 435: 240, 448: 238, 449: 248, 450: 249, 451: 250, 464: 251, 465: 247, 466: 252, 467: 245, 480: 255, 481: 246, 482: 254, 483: 253, 496: 256, 497: 258, 498: 259, 499: 195, 512: 260, 513: 261, 514: 33, 515: 6, 528: 334, 529: 335, 530: 336, 531: 341, 544: 36, 545: 340, 546: 337, 547: 338, 560: 339, 561: 289, 562: 290, 563: 291, 576: 51, 577: 292, 578: 293, 579: 294, 592: 295, 593: 296, 594: 297, 595: 300, 608: 301, 609: 304, 610: 7, 611: 263, 624: 265, 625: 267, 626: 270, 627: 272, 640: 276, 641: 262, 642: 277, 643: 279, 656: 266, 657: 280, 658: 282, 659: 283, 672: 284, 673: 268, 674: 287, 675: 271, 688: 274, 689: 264, 690: 192}
-nations = {}
+nations = {0: 'n/a', 22: 'Yugoslavia', 65: 'Mali'}
 nat_groups = {17: [45, 330, 311, 305, 317, 306, 26, 318, 307, 327, 31, 312, 328, 322, 308, 323, 314, 202, 309, 315, 316, 329, 331, 332, 18, 196, 21, 333, 310, 324, 321, 325, 313, 319, 326, 320], 42: [42, 30, 49, 20, 63, 263, 265, 267, 269, 281, 270, 272, 193, 275, 276, 262, 273, 277, 279, 266, 280, 34, 282, 283, 37, 284, 285, 268, 287, 271, 274, 286, 199, 264, 192, 278], 38: [43, 33, 345, 241, 243, 237, 248, 256, 249, 250, 195, 251, 242, 244, 260, 239, 258, 240, 247, 261, 252, 245, 259, 257, 255, 238, 246, 254, 253, 201], 12: [64, 39, 40, 44, 46, 342, 343, 12, 8, 344], 13: [65, 36, 337, 341, 334, 335, 340, 338, 336, 339], 28: [303, 304, 66, 291, 292, 38, 288, 41, 191, 295, 47, 48, 50, 293, 296, 51, 52, 289, 53, 25, 27, 194, 28, 15, 29, 294, 301, 200, 32, 302, 297, 290, 35, 10, 11, 13, 14, 16, 17, 300, 19, 298, 208, 22, 23, 24, 6, 7, 9, 299]}
 
 FCDB = []
@@ -359,9 +362,9 @@ FCDBPENG = []
 non_league_teams = set()
 
 tactics = [
-	'5-4-1',
-	'5-3-2',
-	'4-5-1',
+	'1-4-4-1',
+	'1-4-3-2',
+	'1-3-5-1',
 	'1-3-4-2',
 	'1-3-3-3',
 	'4-4-2',
@@ -369,8 +372,6 @@ tactics = [
 	'3-5-2',
 	'3-4-3'
 ]
-
-bank = 2.78125
 
 stadiums = [
 	'Olympiastadion',
@@ -418,8 +419,8 @@ colours = [
 ]
 shorts = [
 	'plain',
-	'hor.trim',
-	'ver.stripe'
+	'trim',
+	'stripes'
 ]
 socks = [
 	'plain',
@@ -487,6 +488,7 @@ inner_line='├%s┤'%'┼'.join(['─'*fieldopedia[x]['width'] for x in field_o
 end_border ='╘%s╛'%'╧'.join(['═'*fieldopedia[x]['width'] for x in field_order[:-1]])
 
 players_db = {}
+tmmng_db = {}
 
 #functions
 def save(where, what):
@@ -632,14 +634,8 @@ def load_database(**args):
 					tm_names.append(temp_list:=[n for n in string.decode('unicode-escape').split('\x00') if n!=''])
 					teams.append({'names': temp_list, 'index_fcdbpeng': _+tnIndex, 'db_position': e, 'search_name': unidecode.unidecode(temp_list[-1])})
 				break
-		for nation_id, pos in nation_codes.items():
-			if pos == e:
-				nations.setdefault(nation_id, temp_list[-1])
-				teams[-1].setdefault('nation', nation_id)
 	FCDB_ENG.append(tm_names)
 	globalDB['FCDB_ENG']['team names'] = len(FCDB_ENG)-1
-	for nation_id, pos in nation_codes.items():
-		if not type(pos) == int: nations.setdefault(nation_id, pos)
 	squadre.close()
 	#loading database
 	print('\r\033[KLoading parameters...\r', end = '')
@@ -705,7 +701,7 @@ def load_database(**args):
 		teams[sq_itr]['index_fcdb'] = sq_idx
 		teams[sq_itr]['squad'] = list(set(["{:04X}".format(int.from_bytes(squad[i:i+2] , 'big')) for i in range(24,64,2) if int.from_bytes(squad[i:i+2] , 'big') != 0]))
 		teams[sq_itr]['id'] = ((int.from_bytes(squad[1:2], 'big') & 7) << 8) + int.from_bytes(squad[0:1], 'big')
-		teams[sq_itr]['bank'] = int((((int.from_bytes(squad[1:2], 'big') & 248) >> 3) + (int.from_bytes(squad[2:3], 'big') << 5) + ((int.from_bytes(squad[3:4], 'big') & 15) << 13)) * bank)
+		teams[sq_itr]['bank'] = ((int.from_bytes(squad[1:2], 'big') & 248) >> 3) + (int.from_bytes(squad[2:3], 'big') << 5) + ((int.from_bytes(squad[3:4], 'big') & 15) << 13)
 		teams[sq_itr]['stadium'] = stadiums[int.from_bytes(squad[3:4], 'big') >> 4]
 		teams[sq_itr]['first shirt'] = int.from_bytes(squad[5:6], 'big') >> 2
 		teams[sq_itr]['first shirt - colour 1'] = int.from_bytes(squad[4:5], 'big') & 31
@@ -730,6 +726,8 @@ def load_database(**args):
 		teams[sq_itr]['strategy'] = strategia[int.from_bytes(squad[17:18], 'big') >> 5]
 		teams[sq_itr]['tactics'] = tactics[int.from_bytes(squad[21:22], 'big') >> 2]
 		teams[sq_itr]['roster size'] = (int.from_bytes(squad[22:23], 'big') & 15) * 2
+		teams[sq_itr]['nation'] = (squad[23] & 15) << 4 | (squad[22] & 240) >> 4
+		nations.setdefault(teams[sq_itr]['nation'],teams[sq_itr]['names'][-1])
 		teams[sq_itr]['league'] = 'Non-League'
 		teams[sq_itr]['league_id'] = len(leagues)
 		for l in leagues:
@@ -773,7 +771,7 @@ def load_database(**args):
 
 		players[iterations]['nation'] = (string[1] & 192) >> 6
 		#bit 2
-		players[iterations]['nation'] = (string[2] << 4) + players[iterations]['nation']
+		players[iterations]['nation'] = (string[2] << 2) + players[iterations]['nation']
 		players[iterations]['country'] = nations[players[iterations]['nation']]
 		#bit 3
 		players[iterations]['starting'] = string[3]
@@ -877,6 +875,19 @@ def load_database(**args):
 				dupl_purged = list(filter(lambda b: b!= '---', dupl_teams))
 				if len(dupl_purged) > 1:
 					print('There are %s players named %s, in %s'%(len(howmany),dupl_name, ', '.join(dupl_purged)))
+		firstkits = []
+		secondkits = []
+		kitteam = []
+		for t in teams:                                                                                                                                                                                
+			k =(t['first shirt'], t['first shirt - colour 1'], t['first shirt - colour 2'], t['first shirt - colour 3'], t['first shorts'], t['first shorts - colour 1'], t['first shorts - colour 2'], t['first socks'], t['first socks - colour 1'], t['first socks - colour 2'])
+			s =(t['second shirt'], t['second shirt - colour 1'], t['second shirt - colour 2'], t['second shirt - colour 3'], t['second shorts'], t['second shorts - colour 1'], t['second shorts - colour 2'], t['second socks'], t['second socks - colour 1'], t['second socks - colour 2'])
+			kitteam.append(t['names'][-1])
+			if k in firstkits:
+				print('Duplicate kits:',t['names'][-1],'&',kitteam[firstkits.index(k)])
+			if s in secondkits:
+				print('Duplicate kits:',t['names'][-1],'(away) &',kitteam[secondkits.index(k)],'(away)')
+			firstkits.append(k)
+		print()
 	debug = False
 	players_db = cpdb()
 
@@ -1003,10 +1014,15 @@ def delete_player():
 			break
 		print('\033[%sA'%(8+len(results)))	
 
-def add_team(**kwargs): 
+def add_team(**kwargs):
+	nat = input('National team [yn]? ') == 'y'
 	ids = [t['id'] for t in teams if type(t['id']) == int]
 	new_id = sorted(ids)[-1] + 1
 	new_team = new_id.to_bytes(2,'little') + bytes(22)
+	if nat:
+		nation_n = len(nations)
+		new_team = new_id.to_bytes(2,'little') + bytes(20) + (((nation_n & 15) << 4) + 10).to_bytes(1,'big') + (nation_n >> 4).to_bytes(1,'big')
+		createNatTeamFlag(str(f'{new_id:04}'))
 	if (data:=kwargs.get('data',None)):
 		new_team = new_id.to_bytes(2,'little')[0].to_bytes(1,'little') + ((data[0][1] & 248) + new_id.to_bytes(2,'little')[1]).to_bytes(1,'little') + data[0][2:]
 	#INCREASE NUMBER OF TEAMS
@@ -1135,15 +1151,16 @@ def rebuildDbFiles(**kwargs):
 def search_players(a,field,*laconic, **kwargs):
 	results = []
 	player_files = {}
+	tableBuilder = []
 	if not laconic:
 		if debug == True:
 			print()
 			print(f'╒════╤{30*"═"}{20*"╤════"}╕')
 			print(f'│    │{"Name":^30}│{"│".join(["{:4d}".format(x) for x in range(20)])}│')
 		if table == True:
-			print()
-			print(border)
-			print('│%s│'%'│'.join(fs_center))
+			tableBuilder.append('')
+			tableBuilder.append(border)
+			tableBuilder.append('│%s│'%'│'.join(fs_center))
 			fields = [set(),[],set(),[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]]
 	fc = 0
 	for b in str(a).split('/'):
@@ -1152,19 +1169,35 @@ def search_players(a,field,*laconic, **kwargs):
 			where = str(x.get(field, ''))
 			if field.upper() == 'INTERNATIONAL' and len(where) > 2: where = where[1:-1]
 			if case_sensitive == False:
-				what = what.upper()
+				what = what.upper().split(',')
 				where = where.upper()
-			found = what == where if kwargs.get('strict', False) else what in where
-			if where[0]+where[-1] == "[]": found = str(what) in [str(_) for _ in eval(where)]
+			for operator in ['>=','<=','>','<']:
+				if operator in what[0]:
+					mv = int(what[0].split(operator)[1])
+					if '>' in operator:
+						what = [str(_) for _ in range((((mv-39)//4) + ('=' not in operator))*4+39,100,4)]
+						break
+					if '<' in operator:
+						what = [str(_) for _ in range(39, (((mv-39)//4) + ('=' not in operator))*4+40,4)]
+						break
+			found = what[0] == where if kwargs.get('strict', False) else any([w in where for w in what])
+			if (refine:=kwargs.get('refine',None)):
+				for extraField in refine:
+					extraCommand = extraField.split('@')[1]
+					extraQuery = extraField.split('@')[2].split(',')
+					for operator in ['>=','<=','>','<']:
+						if operator in extraQuery[0]:
+							mv = int(extraQuery[0].split(operator)[1])
+							if '>' in operator:
+								extraQuery = [str(_) for _ in range((((mv-39)//4) + ('=' not in operator))*4+39,100,4)]
+								break
+							if '<' in operator:
+								extraQuery = [str(_) for _ in range(39, (((mv-39)//4) + ('=' not in operator))*4+40,4)]
+								break
+					if not any([w.upper() in str(x.get(extraCommand,'')).upper() for w in extraQuery]): found = False
 			if found:
 				index = kwargs.get('index', x['index_fcdb'])
-				role = x['role'] #start new
-				if x['starting'] == 196:
-					if role == 'CB': role = 'LCB'
-					elif role == 'CM': role = 'LCM'
-				elif x['starting'] == 195:
-					if role == 'CB': role = 'RCB'
-					elif role == 'CM': role = 'RCM' #end new
+				role = _fgRoles(x['role'], x['starting'])
 				if not laconic:
 					fields_off = ['Name','ID','Hair Type','Hair Colour','Skin Colour','Face','Beard','Role','Index FCDBPENG','Index FCDB','Team','International']
 					if debug == True:
@@ -1191,7 +1224,7 @@ def search_players(a,field,*laconic, **kwargs):
 							player_files[index].append(f"print('Position:','{dict(GK='Goalkeeper',CB='Defender',RB='Defender',LB='Defender',SW='Defender',CM='Midfielder',RM='Midfielder',LM='Midfielder',CF='Forward',RF='Forward',LF='Forward',RCB='Defender',LCB='Defender',RCM='Midfielder',LCM='Midfielder')[role]}', sep='\t\t')")
 							player_files[index].append(f"print('Role:','{role}', sep='\t\t\t')")
 							player_files[index].append(f"print('Jersey:','{x['jersey']}', sep='\t\t\t')")
-							player_files[index].append(f"print('Price:','{x['price']}', sep='\t\t\t')")
+							player_files[index].append(f"print('Price:','{bank(x['price'])}', sep='\t\t\t')")
 							player_files[index].append(f"print('Starting:','{'Yes' if x['starting'] > 128 else 'No'}', sep='\t\t')")
 							player_files[index].append("print(40*'━')")
 							player_files[index].append(f"print('Skin Colour:','{skin_cl[x['skin colour']]}', sep='\t\t')")
@@ -1223,7 +1256,10 @@ def search_players(a,field,*laconic, **kwargs):
 							player_files[index].append("print()")
 						else:
 							player_files[index] = ['']
-							team_string = "{:<10}".format(x['team'])
+							titolare = '*' if x['starting'] > 128 else ''
+							team_string = x['team']+titolare #experimentally new
+							if len(team_string) > fieldopedia['Team']['width']: team_string = team_string [:fieldopedia['Team']['width']-3] + ('.' if team_string[fieldopedia['Team']['width']-4] != ' ' else team_string[fieldopedia['Team']['width']-3])+'.' + ('.' if titolare == '' else titolare)
+							
 							international = ['','']
 							for n in x['international_id']:
 								if n != x['nation']:
@@ -1232,18 +1268,17 @@ def search_players(a,field,*laconic, **kwargs):
 									international[0] = '*'
 							international = ''.join(international)
 
-							if len(team_string)>10:team_string=team_string[:8]+'..'
-
-							print(inner_line)
 							tbl_row ='│'
 							for g in field_order[:-1]:
 								cell_content = x[fieldopedia[g]['db']]
 								if g == 'Hair Colour' :cell_content = hair_cl_d[cell_content]
 								if g == 'Skin Colour' :cell_content = skin_cl_d[cell_content]
 								if g == 'Nation': cell_content += international
+								if g == 'Price': cell_content = bank(cell_content)
+								if g == 'Team': cell_content = team_string
 								tbl_row += align(cell_content,g)
 								tbl_row += '│'
-							print(tbl_row)
+							tableBuilder.append(tbl_row)
 
 							cy = 0
 							for f in field_order:
@@ -1257,6 +1292,14 @@ def search_players(a,field,*laconic, **kwargs):
 				else:
 					results = [x[fieldopedia[g]['db']] for g in skill_fields]
 					results += [x['starting'],x['hair colour'],x['skin colour'],x['face'],x['beard'],x['hair type'],x['jersey'],role,x['name'],x['index_fcdbpeng'],players.index(x)] 
+	if table:
+		sortField = [_.strip() for _ in fs_center].index(tableSort)+1
+		sortRev = (sortField > 11 and sortField < 30) or sortField == 9
+		sortedRows = sorted([_ for _ in tableBuilder[3:]], key=lambda x: x.split('│')[sortField], reverse = sortRev)
+		tableBuilder = tableBuilder[:3]
+		for _ in sortedRows:
+			tableBuilder.append(inner_line)
+			tableBuilder.append(_)
 	if not laconic:
 		if debug == True:
 			print(f"╘════╧{30*'═'}{20*'╧════'}╛")
@@ -1266,9 +1309,10 @@ def search_players(a,field,*laconic, **kwargs):
 		if table == True:
 			if len(results) == 0:
 				global end_border
-				print(inner_line.replace('┼','┴'))
-				print('│ No results%s│'%((sum([fieldopedia[c]['width'] for c in fieldopedia.keys()])+len(fieldopedia.keys())-13)*' '))
-				print(end_border.replace('╧','═').replace('╪','═'))
+				tableBuilder.append(inner_line.replace('┼','┴'))
+				tableBuilder.append('│ No results%s│'%((sum([fieldopedia[c]['width'] for c in fieldopedia.keys()])+len(fieldopedia.keys())-13)*' '))
+				tableBuilder.append(end_border.replace('╧','═').replace('╪','═'))
+				print('\n'.join(_ for _ in tableBuilder))
 				return {'results':results}
 			conflict = 'ok'
 			if len(fields[2]) != len(fields[1]): conflict = '!!'
@@ -1276,7 +1320,7 @@ def search_players(a,field,*laconic, **kwargs):
 			if not debug:
 				for e,data in enumerate(fields):
 					if e == 0: fields[e] = "{:>{width}}".format("%s nations"%len(fields[0]),width=fieldopedia['Nation']['width'])
-					if e == 1: fields[e] = align(math.floor(sum(fields[e])/len(fields[e])),'Price')
+					if e == 1: fields[e] = align(bank(math.floor(sum(fields[e])/len(fields[e]))),'Price')
 					if e == 2: fields[e] = align(conflict, 'Average')
 					if e > 2:  fields[e] = align(math.floor(sum(fields[e])/len(fields[e])),'Average')
 
@@ -1305,53 +1349,64 @@ def search_players(a,field,*laconic, **kwargs):
 					frag_border += '═'*fieldopedia[f]['width']
 					frag_border += '╛'
 				end_border += '═'*(fieldopedia[f]['width'])
-			print(end_border,summary,frag_border,sep='\n')
-			print()
+			tableBuilder.append(end_border)
+			tableBuilder.append(summary)
+			tableBuilder.append(frag_border)
+			tableBuilder.append('')
+			print('\n'.join(_ for _ in tableBuilder))
 	return {'results':results,'files':player_files}
 
 def edit_player(modify,**args):
 	global f_valori, f_nomi, roles, nations
 	vals_already = search_players(modify, 'index_fcdb', True, strict=True)['results']
+	ttmng = tmmng_db.get(players[vals_already[-1]]['team_id'], None)
 	valori = open(f_valori, 'r+b')
 	temp_file = b''
 	mod_offset=int(modify)
 	what_to_edit = args.get('field', None)
 	valid = True
+	edit_menu = [ #fresh
+		[
+			f" [0] aggression ({vals_already[0]})",
+			f" [1] acceleration ({vals_already[1]})",
+			f" [2] attack bias ({vals_already[2]})",
+			f" [3] agility ({vals_already[3]}) ",
+			f" [4] ball ({vals_already[4]})",
+			f" [5] awareness ({vals_already[5]})",
+			f" [6] fitness ({vals_already[6]})",
+			f" [7] creativity ({vals_already[7]})",
+			f" [8] passing ({vals_already[8]})",
+			f" [9] heading ({vals_already[9]})",
+			f" [10] reaction ({vals_already[10]})",
+			f" [11] pass bias ({vals_already[11]})",
+			f" [12] shot power ({vals_already[12]})",
+			f" [13] shot bias ({vals_already[13]})",
+			f" [14] speed ({vals_already[14]})",
+			f" [15] shot accuracy ({vals_already[15]})",
+			f" [16] tackle ({vals_already[16]})",
+			f" [*] all "
+		],
+		[
+			" [n]ame",
+			f" [j]ersey ({vals_already[23]})",
+			f" [r]ole ({vals_already[24]})",
+			f" countr[y]",
+			f" [p]rice"		
+		],
+		[
+			f" [f]ace",
+			f" [s]kin colour",
+			f" [h]air",
+			f" hair c[o]lour",
+			f" [b]eard"
+		]
+	]
+	menu = '	╔═════════════════════════╗\n'+\
+		  '\n	╟─────────────────────────╢\n'.join(['\n'.join([f"	║{t:<25}║" for t in submenu]) for submenu in edit_menu])+\
+	   """\n	╚═════════════════════════╝
+(hit return to go back):\033[J """	  
 	while True:
-		if what_to_edit is None: what_to_edit = input("""
-Parameter to edit:
-	╔═════════════════════════╗
-	║ [0] aggression (%s)     ║
-	║ [1] acceleration (%s)   ║
-	║ [2] attack bias (%s)    ║
-	║ [3] agility (%s)        ║
-	║ [4] ball (%s)           ║
-	║ [5] awareness (%s)      ║
-	║ [6] fitness (%s)        ║
-	║ [7] creativity (%s)     ║
-	║ [8] passing (%s)        ║
-	║ [9] heading (%s)        ║
-	║ [10] reaction (%s)      ║
-	║ [11] pass bias (%s)     ║
-	║ [12] shot power (%s)    ║
-	║ [13] shot bias (%s)     ║
-	║ [14] speed (%s)         ║
-	║ [15] shot accuracy (%s) ║
-	║ [16] tackle (%s)        ║
-	║ [*] all                 ║
-	╟─────────────────────────╢
-	║ [n]ame                  ║
-	║ [j]ersey (%s)           ║
-	║ [r]ole (%s)             ║
-	║ countr[y]               ║
-	╟─────────────────────────╢
-	║ [f]ace                  ║
-	║ [s]kin colour           ║
-	║ [h]air                  ║
-	║ hair c[o]lour           ║
-	║ [b]eard                 ║
-	╚═════════════════════════╝
-(hit return to go back):\033[J """%(eval(','.join(["'%s'"%'{:0>2}'.format(str(x)) for x in vals_already[:17]+vals_already[23:-3]]))))
+		if what_to_edit is None: what_to_edit = input(f"Parameter to edit:\n{menu}")
 		if len(what_to_edit) == 0:
 			return mod_offset
 		elif what_to_edit == 'n':
@@ -1392,6 +1447,34 @@ Parameter to edit:
 			save(f_nomi, temp_file)
 			nomi.close()
 			load_database()
+		elif what_to_edit == 'p':
+			new_price = int(args.get('value', 100))
+			if new_price == 100:
+				new_price = input('\nEnter new price (\'c\' to cancel): ')
+				while True:
+					try:
+						new_price = int(new_price)
+						break
+					except:
+						if new_price == 'c': break
+						print('Enter a number or \'c\' to cancel.')
+						return 
+			new_price = min(unbank(new_price), 65535)
+			price_bit = [new_price & 255,new_price>>8]
+			valori.seek(0, 0)
+			temp_file = valori.read(mod_offset)
+			for bit in range(20):
+				if bit < 4:
+					temp_file += valori.read(1)
+				if bit == 4:
+					valori.read(1)
+					temp_file += bytes([price_bit[0]])
+				if bit == 5:
+					valori.read(1)
+					temp_file += bytes([price_bit[1]])
+			temp_file+=valori.read()
+			save(f_valori, temp_file)
+			load_database(load=len(args.get('field', '')))	
 		elif what_to_edit == 'j':
 			new_jersey = int(args.get('value', 100))
 			if new_jersey == 100: new_jersey = int(inputPlus('\nEnter new jersey (hit return to cancel)',[_ for _ in range(1,101)], entC=True)[0])
@@ -1464,6 +1547,7 @@ Parameter to edit:
 				break
 			else:
 				countries = {x:y[0] for x,y in countries.items()}
+				del countries['N/A']
 			new_country= args.get('value', '')
 			if new_country.upper() not in countries.keys():
 				print('\n')
@@ -1810,6 +1894,17 @@ Parameter to edit:
 				vals = [math.floor((int(x)-39)/4) for x in new_vals]
 			else:
 				print('New average: ', math.floor(sum([int(vals) for vals in new_vals.split()])/len(vals)))
+			if ttmng:
+				pl_team = [t for t in teams if t['id'] == players[vals_already[-1]]['team_id']][0]
+				if players[vals_already[-1]]['id'] in ttmng['lineup']:
+					pos = ttmng['lineup'].index(players[vals_already[-1]]['id'])
+					if vals[0] != (vals_already[0]-39)//4:
+						ttmng['aggression'][pos] = vals[0]
+						_refresh_tmmng(pl_team,'aggression',ttmng['aggression'])
+					if vals[2] != (vals_already[2]-39)//4:
+						ttmng['attack'][pos] = vals[2]
+						_refresh_tmmng(pl_team,'attack',ttmng['attack'])
+					write_tmmng()
 			valori.seek(0, 0)
 			temp_file = valori.read(mod_offset-1)
 			ind_inp = 0
@@ -1871,14 +1966,15 @@ def show_teams(*index):
 			results += 1
 			if _display_team(params) == 'cancelled': return
 	if results == 0: print('Not found')
-	if input('\nSearch new team? [yn] ') == 'n': return False
-	else: show_teams()
+	if (ntSearch:=input('\nSearch new team? [yn] ')) == 'n': return False
+	else: show_teams(ntSearch) if ntSearch != 'y' else show_teams()
 
 def _display_team(params, **kwargs):
 	os.system(clear_screen)
 	refresh = kwargs.get('refresh',None)
 	(idx, t, index) = params
 	if refresh: t = teams[idx]
+	ttmng = tmmng_db.get(t['id'],{})
 	print('%s'%('━'*80))
 	print('Name', t['names'][-1], sep="\t\t\t")
 	print('%s'%('─'*80))
@@ -1890,7 +1986,7 @@ def _display_team(params, **kwargs):
 	print('Id', t['id'], sep="\t\t\t")
 	print('%s'%('─'*80))
 	print('League', t['league'], sep="\t\t\t")
-	print('Bankroll', t['bank'], sep="\t\t")
+	print('Bankroll', bank(t['bank']), sep="\t\t")
 	print('Stadium', t['stadium'], sep="\t\t\t")
 	print('%s'%('─'*80))
 	firstkit, secondkit = '', ''
@@ -1915,20 +2011,24 @@ def _display_team(params, **kwargs):
 	if t["league_id"] >= 11:
 		rt = recommended_tactics(t['squad'], tactics=t['tactics'])
 	print('Strategy', t['strategy'], sep="\t\t")
-	print('Tactics', t['tactics'], sep="\t\t\t")
-	current = rt['starting']
+	n_tactics = ttmng.get('formation',[]) if not ttmng.get('formation',None) is None else t['tactics'].split('-') #fresh
+	print('Tactics', '-'.join(n_tactics), sep="\t\t\t")
+	current = [(players_db[p]['name'],_fgRoles(players_db[p]['role'],players_db[p]['starting']),players_db[p]['average'],players_db[p]['starting'],players_db[p]['country'],players_db[p][f'jersey'],p,players_db[p]['index_fcdb'],players_db[p]['team']) for p in ttmng.get('lineup',[])] if not ttmng.get('lineup',None) is None else rt['starting']
 	if (rls:=[_[1] for _ in current]).count('CB') > 1 and rls.count('SW') > 0 and rls[::-1].index('SW') < rls[::-1].index('CB'):
 		current = current[:rls.index('CB')+1] + [current[rls.index('SW')]] + [current[rls.index('SW')-1]] + current[len(current)-rls[::-1].index('SW'):]
 	fine = '' if t['roster size']==len(pl_list := rt['pl_list']) else ' (%s)'%len(pl_list)
 	print('Roster Size', str(t['roster size'])+fine, sep="\t\t")
 	print('Average\t\t\t%s'%str(int(sum(values := rt['values'])/max(1,len(values)))))
-	print(f'Set piece taker{"s" if len(rt["shot takers"]) > 1 else chr(9)}\t%s'%', '.join(rt['shot takers']))
+	spt = [f'{setpiece[e]+":":<4} {players_db[i]["name"]}' for e,i in enumerate(ttmng.get("set_piece",[]) if not ttmng.get("set_piece",None) is None else _find_set_piece(t))]
+	if len(spt) > 0: spt = [f'{spt[a]:<20}{spt[a+1]:<20}{spt[a+2]:<20}' for a in range(0,7,3)]
+	print('Set piece takers',"\n                \t".join(spt),sep='\t')
 	print('%s'%('─'*80))
 	lineup = ''
-	reparti = list(numpy.cumsum([int(r) for r in t['tactics'].split('-')]))
+	if 'd' in n_tactics[0]: n_tactics = ['1',str(int(n_tactics[0].replace('d',''))-1),n_tactics[1],n_tactics[2]]
+	reparti = list(numpy.cumsum([int(r.replace('d','')) for r in n_tactics]))
 	for lpl, p in enumerate(current):
 		p = list(p)
-		lineup += f'{p[5]:>5} {p[0]:<40.39} {p[1]:>3} {p[4] if t["league_id"] < 11  or t["league"] == "Non-League" else p[8] :<20} {p[2]}'
+		lineup += f'{p[5]:>6} {p[0]:<40.39} {p[1]:>3} {p[4] if t["league_id"] < 11  or t["league"] == "Non-League" else p[8] :<20} {p[2]}'
 		lineup += '\n{:^80}\n'.format('─'*72) if lpl == 0 or lpl in reparti[:-1] else '\n'
 	print('Squad\n',lineup[:-1],'{:^80}'.format('━'*72),sep='\n')
 	bench = sorted([_ for _ in rt['pl_list'] if _ not in current], key = lambda x: x[6])
@@ -1956,7 +2056,7 @@ def _display_team(params, **kwargs):
 	print('%s'%('━'*80))
 	if len(index) == 0 and not refresh:
 		team_data_query = ''
-		standard_query = f"[e]dit team {t['names'][-1]} / show [k]its / [s]how player info {'/ [h]istory ' if t['league_id'] < 11 else ''}/ [n]ext team / [c]ancel" 
+		standard_query = f"[e]dit team {t['names'][-1]} / show [k]its / [s]how player info {'/ [r]eset team management ' if ttmng else ''}/ [n]ext team / [c]ancel" 
 
 		while True:
 			print('\033[J\033[1A\033[41;37m\n',standard_query,"\033[0m", sep="",end = "\r")
@@ -1964,6 +2064,10 @@ def _display_team(params, **kwargs):
 			if k == 'e':
 				print('\033[2K\033[1A')
 				edit_team(teams[idx])
+				if _display_team(params, refresh=True) == 'cancelled': return 'cancelled'
+			elif k == 'r':
+				del tmmng[t['id']]
+				write_tmmng()
 				if _display_team(params, refresh=True) == 'cancelled': return 'cancelled'
 			elif k == 'k':
 				def on_closing(event):
@@ -2021,28 +2125,22 @@ def recommended_tactics(squad, **kwargs):
 		if players[p[px]]['role'] != 'GK':
 			takers.setdefault(players[p[px]]['shot power'],[]).append(players[p[px]]['name'])
 			takers_ids.setdefault(players[p[px]]['shot power'],[]).append(players[p[px]]['id'])
-		px_role = players[p[px]]['role']
-		if players[p[px]]['starting'] == 196:
-			if px_role == 'CB': px_role = 'LCB'
-			elif px_role == 'CM': px_role = 'LCM'
-		elif players[p[px]]['starting'] == 195:
-			if px_role == 'CB': px_role = 'RCB'
-			elif px_role == 'CM': px_role = 'RCM' #end new
+		px_role = _fgRoles(players[p[px]]['role'],players[p[px]]['starting'])		
 		pl_list.append((players[p[px]]['name'],px_role,av:=players[p[px]]['average'],players[p[px]][f'starting'],players[p[px]]['country'],players[p[px]][f'jersey'],players[p[px]]['id'],players[p[px]]['index_fcdb'],players[p[px]]['team']))
 		values.append(av)
-	current = sorted(sorted(pl_list, key=lambda y: y[3], reverse=True)[:11], key=lambda w: dict(GK=0,RB=1,RCB=2,SW=3,CB=3,LCB=4,LB=5,RM=6,RCM=7,CM=8,LCM=9,LM=10,RF=11,CF=12,LF=13)[w[1]]) 
+	current = sorted(sorted(pl_list, key=lambda y: y[3], reverse=True)[:11], key=lambda w: dict(GK=0,RB=1,RCB=2,SW=0.5,CB=3,LCB=4,LB=5,RM=6,RCM=7,CM=8,LCM=9,LM=10,RF=11,CF=12,LF=13)[w[1]]) 
 	pool=sorted(pl_list, key = lambda x: x[2], reverse = True)
 	pl_list = ['%s (%s, %s)'%(y,z,q) for (y,z,q,k,w,h,u,x,j) in pool]
 	possible_lineups = {
-			'5-4-1': [['GK','RB','RCB','CB','LCB','LB','RM','RCM','LCM','LM','CF']],
-			'5-3-2':[['GK','RB','RCB','CB','LCB','LB','RCM','CM','LCM','CF','CF']],
-			'4-5-1':[['GK','RCB','SW','CB','LCB','RM','RCM','CM','LCM','LM','CF']],
-			'1-3-4-2':[['GK','SW','RB','CB','LB','RM','RCM','LCM','LM','CF','CF']],
-			'1-3-3-3':[['GK','SW','RB','CB','LB','RCM','CM','LCM','RF','CF','LF']],
+			'1-4-4-1': [['GK','SW','RB','RCB','LCB','LB','RM','RCM','LCM','LM','CF']],
+			'1-4-3-2':[['GK','SW','RB','RCB','LCB','LB','RCM','CM','LCM','CF','CF']],
+			'1-3-5-1':[['GK','SW','RCB','CB','LCB','RM','RCM','CM','LCM','LM','CF']],
 			'4-4-2':[['GK','RB','RCB','LCB','LB','RM','RCM','LCM','LM','CF','CF']],
 			'4-3-3':[['GK','RB','RCB','LCB','LB','RCM','CM','LCM','RF','CF','LF']],
+			'1-3-4-2':[['GK','SW','RB','CB','LB','RM','RCM','LCM','LM','CF','CF']],
+			'1-3-3-3':[['GK','SW','RB','CB','LB','RCM','CM','LCM','RF','CF','LF']],
 			'3-4-3':[['GK','RCB','CB','LCB','RM','RCM','LCM','LM','RF','CF','LF']],
-			'3-5-2':[['GK','RCB','SW','LCB','RM','RCM','CM','LCM','LM','CF','CF']]
+			'3-5-2':[['GK','RCB','CB','LCB','RM','RCM','CM','LCM','LM','CF','CF']]
 	}
 	missing_positions = {}
 	for lineup,roles in possible_lineups.items():
@@ -2105,18 +2203,90 @@ def recommended_tactics(squad, **kwargs):
 		takers_ids = takers_ids[sorted(takers_ids)[-1]]
 	return {'rec_tactics': best_lineup[0] if best_lineup[2] > 0 else 'n/a', 'values': values, 'pl_list': pool, 'lineup': lineup, 'lineup_ids': [o[-3] for o in best_lineup[1]], 'starting': current, 'rec':rec, 'to improve':to_improve, 'duplicate roles': dpls,'problems':problems,'shot takers':takers,'takers_ids':takers_ids}
 
+fields_tmmng = {
+	'formation':lambda x:x['tactics'].split('-'),
+	'strategy':lambda x:strategia.index(x['strategy']),
+	'lineup':lambda x:[p[6] for p in recommended_tactics(x['squad'])['starting']],
+	'set_piece':lambda x:_find_set_piece(x),
+	'positions':lambda x:[130]*11,
+	'aggression':lambda x:[int((players_db[p[6]]['aggression']-39)/4) for p in recommended_tactics(x['squad'])['starting']],
+	'attack':lambda x:[int((players_db[p[6]]['attack bias']-39)/4) for p in recommended_tactics(x['squad'])['starting']]
+	}
+	
+def _find_set_piece(team):
+	if len(team['squad']) == 0: return []
+	set_piece = []
+	tactics = [int(r) for r in team['tactics'].split('-')]
+	if len(tactics) == 4: tactics = [tactics[0]+tactics[1],tactics[2],tactics[3]]
+	current = [c[6] for c in recommended_tactics(team['squad'])['starting']]
+	reparti = list(numpy.cumsum([0,1] + tactics))
+	by_pos = []
+	for e,c in enumerate(reparti[:-1]):
+		by_pos.append(current[c:reparti[e+1]])
+	set_piece.append(by_pos[2][-1])
+	set_piece.append(by_pos[2][0])
+	other = sorted([p for p in players if p['id'] in current], key=lambda w:w['shot power'])[-1]['id']
+	set_piece += [other, other]
+	set_piece += current[6:]
+	return set_piece
+
+def _refresh_tmmng(team,field,value):
+	global tmmng_db
+	t = tmmng_db.setdefault(team['id'],{})
+	for f,corr in fields_tmmng.items():
+		if f == field:
+			t[f] = value
+		else:
+			t.setdefault(f,corr(team))
+			
+def _tmmng_roles(formation):
+	sweeper = False
+	reparti = ['1'] + formation
+	if 'd' in reparti[1]:
+		sweeper = True
+		reparti.insert(1,'1')
+	reparti = [int(v.replace('d','')) for v in reparti]
+	if len(reparti) == 5: reparti[2] -= 1
+	role_plantilla = []
+	rroles = ['B','F','M']
+	for e,r in enumerate(reparti):
+		if e == 0: role_plantilla.append('GK')
+		if e == 1 and sweeper: role_plantilla.append('SW')
+		if e >= len(reparti)-3:
+			if r == 1: role_plantilla.append(f'C{rroles[len(reparti)-3-e]}')
+			if r == 2:
+				role_plantilla.append(f'RC{rroles[len(reparti)-3-e]}')
+				role_plantilla.append(f'LC{rroles[len(reparti)-3-e]}')
+			if r == 3:
+				role_plantilla.append(f'RC{rroles[len(reparti)-3-e]}')
+				role_plantilla.append(f'C{rroles[len(reparti)-3-e]}')
+				role_plantilla.append(f'LC{rroles[len(reparti)-3-e]}')
+			if r == 4:
+				role_plantilla.append(f'R{rroles[len(reparti)-3-e]}')
+				role_plantilla.append(f'RC{rroles[len(reparti)-3-e]}')
+				role_plantilla.append(f'LC{rroles[len(reparti)-3-e]}')
+				role_plantilla.append(f'L{rroles[len(reparti)-3-e]}')
+			if r == 5:
+				role_plantilla.append(f'R{rroles[len(reparti)-3-e]}')
+				role_plantilla.append(f'RC{rroles[len(reparti)-3-e]}')
+				role_plantilla.append(f'C{rroles[len(reparti)-3-e]}')
+				role_plantilla.append(f'LC{rroles[len(reparti)-3-e]}')
+				role_plantilla.append(f'L{rroles[len(reparti)-3-e]}')
+	return role_plantilla
+
 def edit_team(modify, **args):
 	global table
 	vals_already = modify
+	ttmng = tmmng_db.get(vals_already['id'],{})
 	valori = open(f_valori, 'r+b')
 	temp_file = b''
 	mod_offset=int(modify['index_fcdb'])
 	new_value = args.get('value', None)
-	lineup ='\n\t║ [l]ineup                ║\n\t║ s[e]t piece taker       ║' if vals_already['league_id'] <= 10  or vals_already['league'] == 'Non-League' else ''
-	call_players = '\n\t║ [c]all players          ║\n\t║ call [d]ual nationals   ║' if vals_already['league_id'] > 10 and vals_already['league'] != 'Non-League' else '' 
-	buy_players = "\n\t║ [buy] player            ║" if len(vals_already['squad']) < 20 else ''
-	fill_team = "\n\t║ [fill] roster           ║" if len(vals_already['squad']) == 0 else '' 
-	edit_players = '%s\n\t║ [sell] player           ║\n\t║ e[x]change players      ║\n\t║ [rel]ease player        ║'%buy_players if vals_already['league_id'] <= 10 or vals_already['league'] == 'Non-League' else '' 
+	lineup ='\n\t║ [l]ineup                ║\n\t║ s[e]t piece taker       ║' if vals_already['nation'] == 0 else '' #NEW #fresh
+	call_players = '\n\t║ [c]all players          ║\n\t║ call [d]ual nationals   ║' if vals_already['nation'] > 0 else '' #NEW #fresh
+	buy_players = "\n\t║ [buy] player            ║" if len(vals_already['squad']) < 20 and vals_already['nation'] == 0 else '' #fresh
+	fill_team = "\n\t║ [fill] roster           ║" if len(vals_already['squad']) == 0 else '' #NEW
+	edit_players = '%s\n\t║ [sell] player           ║\n\t║ e[x]change players      ║\n\t║ [rel]ease player        ║'%buy_players if vals_already['nation'] == 0 else '' 
 
 	valori.seek(0, 0)
 	temp_file = valori.read(mod_offset)
@@ -2132,20 +2302,10 @@ Parameter to edit:
 	║ [n]ames                 ║
 	║ [b]ankroll              ║
 	║ [s]tadium               ║
-	║ [f]irst [s]hirt         ║
-	║     └ [c]olours         ║
-	║ [f]irst s[h]orts        ║
-	║     └ [c]olours         ║
-	║ [f]irst soc[k]s         ║
-	║     └ [c]olours         ║
-	║ [s]econd [s]hirt        ║
-	║     └ [c]olours         ║
-	║ [s]econd s[h]orts       ║
-	║     └ [c]olours         ║
-	║ [s]econd soc[k]s        ║
-	║     └ [c]olours         ║
+	║ [f]irst [k]it           ║
+	║ [s]econd [k]it          ║
 	║ strateg[y]              ║
-	║ [t]actics               ║%s
+	║ forma[t]ion             ║%s
 	║ [p]layers               ║%s%s%s
 	╚═════════════════════════╝
 (hit return to go back): """%(lineup,fill_team,edit_players,call_players))
@@ -2158,36 +2318,54 @@ Parameter to edit:
 		if what_to_edit is None:
 			return mod_offset
 		if what_to_edit == 'l':
-			roster = [(p['name'],p['role'],p['index_fcdb'],p['average']) for p in players if (p['team_id'] == vals_already['id']) or (vals_already.get('nation','') in p['international_id'])]
-			reparti = vals_already['tactics']
-			if reparti == '5-4-1': reparti = ['GK','RB',('CB','RCB'),'CB',('CB','LCB'),'LB','RM',('CM','RCM'),('CM','LCM'),'LM','F']
-			if reparti == '5-3-2': reparti = ['GK','RB',('CB','RCB'),'CB',('CB','LCB'),'LB',('CM','RCM'),'CM',('CM','LCM'),'F','F']
-			if reparti == '4-5-1': reparti = ['GK',('CB','RCB'),'SW','CB',('CB','LCB'),'RM',('CM','RCM'),'CM',('CM','LCM'),'LM','F']
-			if reparti == '1-3-4-2': reparti = ['GK','SW','RB','CB','LB','RM',('CM','RCM'),('CM','LCM'),'LM','F','F']
-			if reparti == '1-3-3-3': reparti = ['GK','SW','RB','CB','LB',('CM','RCM'),'CM',('CM','LCM'),('F','RF'),('F','CF'),('F','LF')]
-			if reparti == '4-4-2': reparti = ['GK','RB',('CB','RCB'),('CB','LCB'),'LB','RM',('CM','RCM'),('CM','LCM'),'LM','F','F']
-			if reparti == '4-3-3': reparti = ['GK','RB',('CB','RCB'),('CB','LCB'),'LB',('CM','RCM'),'CM',('CM','LCM'),('F','RF'),('F','CF'),('F','LF')]
-			if reparti == '3-4-3': reparti = ['GK',('CB','RCB'),'CB',('CB','LCB'),'RM',('CM','RCM'),('CM','LCM'),'LM',('F','RF'),('F','CF'),('F','LF')]
-			if reparti == '3-5-2': reparti = ['GK',('CB','RCB'),'SW',('CB','LCB'),'RM',('CM','RCM'),'CM',('CM','LCM'),'LM','F','F']
-			reparti = [(r, r) if isinstance(r,str) else r for r in reparti]
-			lineup = {}
-			def b(r):
-				try:
-					lineup.setdefault(roster.pop(roster.index((tp:=sorted([x for x in roster if x[1].find(r[0]) > -1], key = lambda x: x[3], reverse=True))[int(input('   '+'\n   '.join(['[%s]: %s (%s)'%(t+1,d[0],d[3]) for (t,d) in enumerate(tp)]) + '\n: '))-1]))[2], r[1])
-				except:
-					print(f'No player input, or not enough {r[0]} for the selected tactics')
-					if input('Try again? [yn] ') == 'n': return None
-					else: b(r)
-				else: return True
-			for r in reparti:
-				print('\nSelect %s:'%r[1])
-				if b(r) is None: break
-			if len(lineup) == 11:
-				for x in roster:
-					edit_player(x[2], field='st', value=None)
-				for x,r in lineup.items():
-					edit_player(x, field='st', value=180, role=r if isinstance(r,str) else r[-1])
-				load_database()
+			roster = [(p['name'],p['role'],p['index_fcdb'],p['average'],p['id']) for p in players if (p['team_id'] == vals_already['id']) or (vals_already.get('nation','') in p['international_id'])] #NEW
+			if ttmng:
+				role_plantilla = _tmmng_roles(ttmng['formation'])
+				lineup = []
+				role_order = dict(GK=0,RB=1,RCB=2,SW=0.5,CB=3,LCB=4,LB=5,RM=6,RCM=7,CM=8,LCM=9,LM=10,RF=11,CF=12,LF=13)
+				def b():
+					try:
+						lineup.append(roster.pop(roster.index((tp:=sorted(roster, key = lambda x: role_order[x[1]]))[int(input('   '+'\n   '.join(['[%s]: %s (%s, %s)'%(t+1,d[0],d[1],d[3]) for (t,d) in enumerate(tp)]) + '\n: '))-1]))[-1])
+					except:
+						print(f'No player input')
+						if input('Try again? [yn] ') == 'n': return None
+						else: b()
+					else: return True
+				for role in role_plantilla:
+					print('\nSelect %s:'%role)
+					if b() is None: break
+				_refresh_tmmng(vals_already,'lineup',lineup)
+				write_tmmng()
+			else:
+				reparti = vals_already['tactics']
+				if reparti == '1-4-4-1': reparti = ['GK','SW','RB',('CB','RCB'),('CB','LCB'),'LB','RM',('CM','RCM'),('CM','LCM'),'LM','F']
+				if reparti == '1-4-3-2': reparti = ['GK','SW','RB',('CB','RCB'),('CB','LCB'),'LB',('CM','RCM'),'CM',('CM','LCM'),'F','F']
+				if reparti == '1-3-5-1': reparti = ['GK','SW',('CB','RCB'),'CB',('CB','LCB'),'RM',('CM','RCM'),'CM',('CM','LCM'),'LM','F']
+				if reparti == '1-3-4-2': reparti = ['GK','SW','RB','CB','LB','RM',('CM','RCM'),('CM','LCM'),'LM','F','F']
+				if reparti == '1-3-3-3': reparti = ['GK','SW','RB','CB','LB',('CM','RCM'),'CM',('CM','LCM'),('F','RF'),('F','CF'),('F','LF')]
+				if reparti == '4-4-2': reparti = ['GK','RB',('CB','RCB'),('CB','LCB'),'LB','RM',('CM','RCM'),('CM','LCM'),'LM','F','F']
+				if reparti == '4-3-3': reparti = ['GK','RB',('CB','RCB'),('CB','LCB'),'LB',('CM','RCM'),'CM',('CM','LCM'),('F','RF'),('F','CF'),('F','LF')]
+				if reparti == '3-4-3': reparti = ['GK',('CB','RCB'),'CB',('CB','LCB'),'RM',('CM','RCM'),('CM','LCM'),'LM',('F','RF'),('F','CF'),('F','LF')]
+				if reparti == '3-5-2': reparti = ['GK',('CB','RCB'),'CB',('CB','LCB'),'RM',('CM','RCM'),'CM',('CM','LCM'),'LM','F','F']
+				reparti = [(r, r) if isinstance(r,str) else r for r in reparti]
+				lineup = {}
+				def b(r):
+					try:
+						lineup.setdefault(roster.pop(roster.index((tp:=sorted([x for x in roster if x[1].find(r[0]) > -1], key = lambda x: x[3], reverse=True))[int(input('   '+'\n   '.join(['[%s]: %s (%s)'%(t+1,d[0],d[3]) for (t,d) in enumerate(tp)]) + '\n: '))-1]))[2], r[1])
+					except:
+						print(f'No player input, or not enough {r[0]} for the selected tactics')
+						if input('Try again? [yn] ') == 'n': return None
+						else: b(r)
+					else: return True
+				for r in reparti:
+					print('\nSelect %s:'%r[1])
+					if b(r) is None: break
+				if len(lineup) == 11:
+					for x in roster:
+						edit_player(x[2], field='st', value=None)
+					for x,r in lineup.items():
+						edit_player(x, field='st', value=180, role=r if isinstance(r,str) else r[-1])
+					load_database()
 		elif what_to_edit in ['buy', 'sell', 'x', 'rel', 'fill']:
 			source_pl, dest_tm, dest_lg = None, None, None
 			def edit_squad(xl_squad, index):
@@ -2257,8 +2435,9 @@ Parameter to edit:
 				if source_team:
 					source_squad = source_team['squad']
 					source_roster = sorted([p for p in players if p['id'] in source_squad], key=lambda w:w['name'])
+					menu_entries = [f"{_['name']} ({_['role']}, {_['average']}, {_['country']})" for _ in source_roster] 
 					destination_starting = [p for p in players if p['id'] in vals_already['squad'] if p['starting'] == 180]
-					player_to_transfer = int(inputPlus('\nSelect player:\n  $OPTIONLIST_l$$CANCEL$',source_roster, field="['name']+' ('+o['role']+', '+str(o['average'])+', '+o['country']+')'", c=True, sep='\n  ')[0])
+					player_to_transfer = int(inputPlus('\nSelect player:\n  $OPTIONLIST_l$$CANCEL$',menu_entries, c=True, sep='\n  ')[0])
 					if player_to_transfer < len(source_roster):
 						vals_already['squad'].append(source_roster[player_to_transfer]['id'])
 						if source_roster[player_to_transfer]['starting'] == 180 and len(destination_starting) > 10:
@@ -2271,7 +2450,8 @@ Parameter to edit:
 			elif what_to_edit == 'sell':
 				destination_team = None
 				source_roster = sorted([p for p in players if p['id'] in vals_already['squad']], key=lambda w:w['name'])
-				player_to_transfer = int(inputPlus('\nSelect player:\n  $OPTIONLIST_l$$CANCEL$',source_roster, field="['name']+' ('+o['role']+', '+str(o['average'])+', '+o['country']+')'", c=True, sep='\n  ')[0])
+				menu_entries = [f"{_['name']} ({_['role']}, {_['average']}, {_['country']})" for _ in source_roster]
+				player_to_transfer = int(inputPlus('\nSelect player:\n  $OPTIONLIST_l$$CANCEL$',menu_entries, c=True, sep='\n  ')[0])
 				if player_to_transfer < len(source_roster):
 					a = input('\nSearch destination team / Hit return to browse: ')
 					if len(a) > 0:
@@ -2320,7 +2500,8 @@ Parameter to edit:
 			elif what_to_edit == 'x':
 				destination_team = None
 				source_roster = sorted([p for p in players if p['id'] in vals_already['squad']], key=lambda w:w['name'])
-				player_to_transfer = int(inputPlus('\nSelect player:\n  $OPTIONLIST_l$$CANCEL$',source_roster, field="['name']+' ('+o['role']+', '+str(o['average'])+', '+o['country']+')'", c=True, sep='\n  ')[0])
+				menu_entries = [f"{_['name']} ({_['role']}, {_['average']}, {_['country']})" for _ in source_roster]
+				player_to_transfer = int(inputPlus('\nSelect player:\n  $OPTIONLIST_l$$CANCEL$',menu_entries, c=True, sep='\n  ')[0])
 				if player_to_transfer < len(source_roster):
 					a = input('\nSearch destination team / Hit return to browse: ')
 					if len(a) > 0:
@@ -2352,9 +2533,10 @@ Parameter to edit:
 					if destination_team:
 						destination_squad = destination_team['squad']
 						destination_roster = sorted([p for p in players if p['id'] in destination_squad], key=lambda w:w['name'])
+						menu_entries = [f"{_['name']} ({_['role']}, {_['average']}, {_['country']})" for _ in destination_roster] 
 						source_starting = [p for p in source_roster if p['starting'] == 180]
 						destination_starting = [p for p in destination_roster if p['starting'] == 180]
-						player_to_transfer_2 = int(inputPlus('\nSelect player:\n  $OPTIONLIST_l$$CANCEL$',destination_roster, field="['name']+' ('+o['role']+', '+str(o['average'])+', '+o['country']+')'", c=True, sep='\n  ')[0])
+						player_to_transfer_2 = int(inputPlus('\nSelect player:\n  $OPTIONLIST_l$$CANCEL$',menu_entries, c=True, sep='\n  ')[0])
 						if player_to_transfer_2 < len(destination_roster):
 							if source_roster[player_to_transfer]['starting'] == 180 and len(destination_starting) > 10:
 								edit_player(source_roster[player_to_transfer]['index_fcdb'], field='st', value=None)
@@ -2372,7 +2554,8 @@ Parameter to edit:
 						else: return
 			elif what_to_edit == 'rel':
 				source_roster = sorted([p for p in players if p['id'] in vals_already['squad']], key=lambda w:w['name'])
-				player_to_transfer = int(inputPlus('\nSelect player:\n  $OPTIONLIST_l$$CANCEL$',source_roster, field="['name']+' ('+o['role']+', '+str(o['average'])+', '+o['country']+')'", c=True, sep='\n  ')[0])
+				menu_entries = [f"{_['name']} ({_['role']}, {_['average']}, {_['country']})" for _ in source_roster]
+				player_to_transfer = int(inputPlus('\nSelect player:\n  $OPTIONLIST_l$$CANCEL$',menu_entries, c=True, sep='\n  ')[0])
 				if player_to_transfer < len(source_roster):
 					vals_already['squad'].remove(source_roster[player_to_transfer]['id'])
 					if edit_squad(vals_already['squad'],vals_already['index_fcdb']): print('\n%s has been released by %s and is now a free agent'%(source_roster[player_to_transfer]['name'], vals_already['names'][-1]))
@@ -2455,7 +2638,7 @@ Parameter to edit:
 					new_value = None
 					continue
 				else: new_value = int(new_value)
-				new_value = 131071 if new_value > (131071*bank) else int(new_value/bank)
+				new_value = min(131071,unbank(new_value))
 				bankroll_bit = [0,0,0]
 				bankroll_bit[2] = new_value >> 13
 				bankroll_bit[1] = (new_value & 8160) >> 5
@@ -2475,7 +2658,41 @@ Parameter to edit:
 				temp_file+=valori.read()
 				save(f_valori, temp_file)
 				load_database(load=len(args.get('field', '')))
-		elif what_to_edit in ['fs','ss']:
+		elif what_to_edit in ['fs','ss','fk','sk']:
+			global alreadyEdited
+			try:
+				alreadyEdited
+			except:
+				alreadyEdited = {}				
+			def _doEdits(new_value, cols, kit, vals_already,*reload):
+				valori.seek(0,0)
+				temp_file = valori.read(vals_already['index_fcdb'])
+				temp_bytes = [valori.read(1) for x in range(24)]
+				if new_value < len(jersey_types):
+					temp_bytes[5+kit[0]] = bytes([(int.from_bytes(temp_bytes[5+kit[0]], 'big') & 3)+ (new_value << 2)])
+
+					#jec
+					temp_bytes[4+kit[0]] = bytes([((cols[1] & 7) << 5) + cols[0]])
+					temp_bytes[5+kit[0]] = bytes([(int.from_bytes(temp_bytes[5+kit[0]], 'big') & 252) + ((cols[1] & 24) >> 3)])
+					temp_bytes[6+kit[0]] = bytes([(int.from_bytes(temp_bytes[6+kit[0]], 'big') & 224) + cols[2]])
+					#shc
+					temp_bytes[6+kit[0]] = bytes([(int.from_bytes(temp_bytes[6+kit[0]], 'big') & 31) + ((cols[3] & 7) << 5)])
+					temp_bytes[7+kit[0]] = bytes([(int.from_bytes(temp_bytes[7+kit[0]], 'big') & 63)+ (shorts.index(vals_already[f'{kit[1]} shorts']) << 6)])
+					temp_bytes[7+kit[0]] = bytes([(int.from_bytes(temp_bytes[7+kit[0]], 'big') & 252) + ((cols[3] & 24) >> 3)])
+					temp_bytes[8+kit[0]] = bytes([(int.from_bytes(temp_bytes[8+kit[0]], 'big') & 224) + cols[4]])
+					#soc
+					temp_bytes[8+kit[0]] = bytes([(int.from_bytes(temp_bytes[8+kit[0]], 'big') & 31) + ((cols[5] & 7) << 5)])
+					temp_bytes[9+kit[0]] = bytes([(int.from_bytes(temp_bytes[9+kit[0]], 'big') & 252) + ((cols[5] & 24) >> 3)])
+					temp_bytes[10+kit[0]] = bytes([(int.from_bytes(temp_bytes[10+kit[0]], 'big') & 224) + cols[6]])
+					temp_bytes[11+kit[0]] = bytes([(int.from_bytes(temp_bytes[7+kit[0]], 'big') & (63 + kit[0]*18))+ (shorts.index(vals_already[f'{kit[1]} socks']) << (6-int(kit[0]/4)))])
+					temp_file+=b''.join(temp_bytes)
+					temp_file+=valori.read()
+					save(f_valori, temp_file)
+					if not reload:
+						load_database(load=len(args.get('field', '')))
+					else:
+						load_database()
+			if (v:=alreadyEdited.get(vals_already['id'],False)): vals_already = v
 			kit = [0,'first'] if what_to_edit[0] == 'f' else [8,'second']
 			cols = [
 				vals_already[f'{kit[1]} shirt - colour 1'],
@@ -2486,16 +2703,17 @@ Parameter to edit:
 				vals_already[f'{kit[1]} socks - colour 1'],
 				vals_already[f'{kit[1]} socks - colour 2']
 			]
+
 			if os.path.isdir(os.path.join(gamepath.replace('common','ingame'),'PLAYER','TEXTURES','PLYRKITS')):
 				jerseys = [_ for _ in os.listdir(os.path.join(gamepath.replace('common','ingame'),'PLAYER','TEXTURES','PLYRKITS')) if re.match('jers\d\d.fsh',_.lower())]
-				root = tk.Tk()
-				root.title(f'Select {kit[1]} jersey of {vals_already["names"][-1]}')
+				root = tk.Tk() if not (parentW:=args.get('asChild', False)) else tk.Toplevel(parentW) #NEW
+				root.title(f'Edit {kit[1]} kit of {vals_already["names"][-1]}')
 				root.geometry("800x600+0+0")
 				#Code from Codemy
 				# Create A Main Frame
 				main_frame = tk.Frame(root, bg="white")
 				main_frame.pack(fill="both", expand=1)
-				
+
 				top_frame = Frame(main_frame)
 				top_frame.pack(side="top",fill="both")
 
@@ -2516,8 +2734,9 @@ Parameter to edit:
 
 				# Add that New frame To a Window In The Canvas
 				my_canvas.create_window((0,0), window=second_frame, anchor="nw")
-				
+
 				def chCol(x,y):
+					nonlocal cols
 					try:
 						cIndex=y
 						if cIndex != cols[x]:
@@ -2528,6 +2747,18 @@ Parameter to edit:
 								button.config(image = images[e])
 					except:
 						pass
+				def chShortsSocks(x,y):
+					nonlocal vals_already
+					oiMenu[y][0].config(text=eval(ois[y])[x])
+					for e,button in enumerate(buttons):
+						if y == 0:
+							images[e] = ImageTk.PhotoImage(image = showJersey(e,'front',shorts[x],vals_already[f'{kit[1]} socks'],*cols))
+							vals_already[f'{kit[1]} shorts'] = shorts[x]
+						if  y == 1:
+							images[e] = ImageTk.PhotoImage(image = showJersey(e,'front',vals_already[f'{kit[1]} shorts'],socks[x],*cols))
+							vals_already[f'{kit[1]} socks'] = socks[x]
+						button.config(image = images[e])
+					
 				kit_colours = ["Jersey: 1","Jersey: 2","Jersey: 3","Shorts: 1","Shorts: 2","Socks: 1","Socks: 2"]
 				kcMenu = []
 				for kcn, kc in enumerate(kit_colours):
@@ -2540,14 +2771,45 @@ Parameter to edit:
 					kcMenu[-1][0].grid(row=1,column=kcn,padx=5,pady=3)
 					kcMenu[-1].append(Label(top_frame,text = kc))
 					kcMenu[-1][2].grid(row=0,column=kcn, pady=3)
-
+				oi_types = ['plain', 'trim',' stripes']
+				ois = ['shorts','socks']
+				oiMenu = []
+				for ioi, oi in enumerate(ois):
+					menuShortsB = tk.Menubutton(top_frame, text=vals_already[f'{kit[1]} {oi}'].ljust(12))
+					menuShorts = tk.Menu(menuShortsB)
+					for it,t in enumerate(oi_types):
+						menuShorts.add_command(label = t, command = lambda x = it, y=ioi: chShortsSocks(x, y))
+					menuShortsB["menu"] = menuShorts
+					menuShortsB.grid(row=3,column = 3+2*ioi, padx=5,pady=3)
+					menuShortsL = Label(top_frame,text = f'{oi.title()} Type')
+					menuShortsL.grid(row=2,column = 3+2*ioi, pady=3)
+					oiMenu.append([menuShortsB,menuShorts,menuShortsL])
 				images = []
 				global c
 				c = None
-				def on_closing(event):
+				def on_closing(event, pWbuttons):
+					nonlocal new_value, cols, kit, temp_file, temp_bytes, parentW, vals_already
+					global alreadyEdited
+					global c
 					if event.widget == root:
+						if new_value is None: new_value = c or vals_already[f'{kit[1]} shirt']
+						if parentW:
+							pWbuttons.config(image = (nImg:=ImageTk.PhotoImage(showJersey(new_value,'front',vals_already[f'{kit[1]} shorts'],vals_already[f'{kit[1]} socks'],*cols))))
+							pWbuttons.image = nImg							
+							vals_already[f'{kit[1]} shirt'] = new_value
+							vals_already[f'{kit[1]} shirt - colour 1'] = cols[0]
+							vals_already[f'{kit[1]} shirt - colour 2'] = cols[1]
+							vals_already[f'{kit[1]} shirt - colour 3'] = cols[2]
+							vals_already[f'{kit[1]} shorts - colour 1'] = cols[3]
+							vals_already[f'{kit[1]} shorts - colour 2'] = cols[4]
+							vals_already[f'{kit[1]} socks - colour 1'] = cols[5]
+							vals_already[f'{kit[1]} socks - colour 2'] = cols[6]
+							alreadyEdited[vals_already['id']] = vals_already
+
+						else: _doEdits(new_value,cols, kit, vals_already)
+						
 						if platform.system() == 'Darwin': os.system('''/usr/bin/osascript -e 'tell app "Finder" to set frontmost of process "Terminal" to true' ''')
-				root.bind("<Destroy>", on_closing)
+				root.bind("<Destroy>", lambda e,pWbuttons=args.get('buttons',False): on_closing(e,pWbuttons))
 				def callback(n):
 					global c
 					c = int(n['text'])
@@ -2564,118 +2826,57 @@ Parameter to edit:
 						btn['highlightbackground']="#37d3ff"
 						btn['borderwidth']=4
 					btn['command'] = lambda b=btn: callback(b)
-					btn.grid(row=int(e/3)+1, column=e%3, padx=10, pady=10)
+					btn.grid(row=int(e/3)+3, column=e%3, padx=10, pady=10)
 				root.attributes("-topmost", True)
 				root.mainloop()
-				if new_value is None:
-					new_value = c or vals_already[f'{kit[1]} shirt']
+				if parentW: return functools.partial(_doEdits,new_value, cols, kit, vals_already,True)
 			else:
 				select_jersey(vals_already[kit[1]+' shirt - colour 1'],vals_already[kit[1]+' shirt - colour 2'],vals_already[kit[1]+' shirt - colour 3'])
 				addtypes = '' if len(jersey_types) == 33 else '\n\t--- custom jerseys ---\n\t%s'%'\n\t'.join([
 					'[%s] %s'%(e,f) for e,f in enumerate(jersey_types) if e > 33
 				])
 				if new_value is None: new_value = int(inputPlus('\nEnter shirt type %s$CANCEL$'%addtypes,jersey_types,c=True,sep="\n\t")[0])
-			if new_value < len(jersey_types):
-				temp_bytes[5+kit[0]] = bytes([(int.from_bytes(temp_bytes[5+kit[0]], 'big') & 3)+ (new_value << 2)])
-				#jec
-				temp_bytes[4+kit[0]] = bytes([((cols[1] & 7) << 5) + cols[0]])
-				temp_bytes[5+kit[0]] = bytes([(int.from_bytes(temp_bytes[5+kit[0]], 'big') & 252) + ((cols[1] & 24) >> 3)])
-				temp_bytes[6+kit[0]] = bytes([(int.from_bytes(temp_bytes[6+kit[0]], 'big') & 224) + cols[2]])
-				#shc
-				temp_bytes[6+kit[0]] = bytes([(int.from_bytes(temp_bytes[6+kit[0]], 'big') & 31) + ((cols[3] & 7) << 5)])
-				temp_bytes[7+kit[0]] = bytes([(int.from_bytes(temp_bytes[7+kit[0]], 'big') & 252) + ((cols[3] & 24) >> 3)])
-				temp_bytes[8+kit[0]] = bytes([(int.from_bytes(temp_bytes[8+kit[0]], 'big') & 224) + cols[4]])
-				#soc
-				temp_bytes[8+kit[0]] = bytes([(int.from_bytes(temp_bytes[8+kit[0]], 'big') & 31) + ((cols[5] & 7) << 5)])
-				temp_bytes[9+kit[0]] = bytes([(int.from_bytes(temp_bytes[9+kit[0]], 'big') & 252) + ((cols[5] & 24) >> 3)])
-				temp_bytes[10+kit[0]] = bytes([(int.from_bytes(temp_bytes[10+kit[0]], 'big') & 224) + cols[6]])
-				temp_file+=b''.join(temp_bytes)
-				temp_file+=valori.read()
-				save(f_valori, temp_file)
-				load_database(load=len(args.get('field', '')))
-		elif what_to_edit in ['fsc','ssc']:
-			kit = [0,'first'] if what_to_edit[0] == 'f' else [8,'second']
-			if new_value is None:
-				print('\n%s\033[49m'%' '.join(['%s\033[0m [%s] %s'%(cesc[e],e,f) for e,f in enumerate(colours)]))
-				print()
-				new_value = [
-					int((lambda x: x if (y:=int(inputPlus('Change first colour (enter to confirm: "%s")?'%colours[x], colours, entC=True)[0])) == len(colours) else y)(vals_already[kit[1]+' shirt - colour 1'])),
-					int((lambda x: x if (y:=int(inputPlus('Change second colour (enter to confirm: "%s")?'%colours[x], colours, entC=True)[0])) == len(colours) else y)(vals_already[kit[1]+' shirt - colour 2'])),
-					int((lambda x: x if (y:=int(inputPlus('Change third colour (enter to confirm: "%s")?'%colours[x], colours, entC=True)[0])) == len(colours) else y)(vals_already[kit[1]+' shirt - colour 3']))
-				]
-			temp_bytes[4+kit[0]] = bytes([((new_value[1] & 7) << 5) + new_value[0]])
-			temp_bytes[5+kit[0]] = bytes([(int.from_bytes(temp_bytes[5+kit[0]], 'big') & 252) + ((new_value[1] & 24) >> 3)])
-			temp_bytes[6+kit[0]] = bytes([(int.from_bytes(temp_bytes[6+kit[0]], 'big') & 224) + new_value[2]])
-			temp_file+=b''.join(temp_bytes)
-			temp_file+=valori.read()
-			save(f_valori, temp_file)
-			load_database(load=len(args.get('field', '')))
-		elif what_to_edit in ['fh', 'sh']:
-			kit = [0,'first'] if what_to_edit[0] == 'f' else [8,'second']
-			if new_value is None: new_value = int(inputPlus('\nEnter shorts type\n\t$OPTIONLIST_l$$CANCEL$',shorts,c=True,sep='\n\t')[0])
-			if new_value < len(shorts):
-				temp_bytes[7+kit[0]] = bytes([(int.from_bytes(temp_bytes[7+kit[0]], 'big') & 63)+ (new_value << 6)])
-				temp_file+=b''.join(temp_bytes)
-				temp_file+=valori.read()
-				save(f_valori, temp_file)
-				load_database(load=len(args.get('field', '')))
-		elif what_to_edit in ['fhc','shc']:
-			kit = [0,'first'] if what_to_edit[0] == 'f' else [8,'second']
-			if new_value is None:
-				print('\n%s'%' '.join(['%s\033[0m [%s] %s'%(cesc[e],e,f) for e,f in enumerate(colours)]))
-				new_value = [
-					int((lambda x: x if (y:=int(inputPlus('Change first colour (enter to confirm: "%s")?'%colours[x], colours, entC=True)[0])) == len(colours) else y)(vals_already[kit[1]+' shorts - colour 1'])),
-					int((lambda x: x if (y:=int(inputPlus('Change second colour (enter to confirm: "%s")?'%colours[x], colours, entC=True)[0])) == len(colours) else y)(vals_already[kit[1]+' shorts - colour 2']))
-				]
-			temp_bytes[6+kit[0]] = bytes([(int.from_bytes(temp_bytes[6+kit[0]], 'big') & 31) + ((new_value[0] & 7) << 5)])
-			temp_bytes[7+kit[0]] = bytes([(int.from_bytes(temp_bytes[7+kit[0]], 'big') & 252) + ((new_value[0] & 24) >> 3)])
-			temp_bytes[8+kit[0]] = bytes([(int.from_bytes(temp_bytes[8+kit[0]], 'big') & 224) + new_value[1]])
-			temp_file+=b''.join(temp_bytes)
-			temp_file+=valori.read()
-			save(f_valori, temp_file)
-			load_database(load=len(args.get('field', '')))
-		elif what_to_edit in ['fk','sk']:
-			if new_value is None: new_value = int(inputPlus('\nEnter socks type\n\t$OPTIONLIST_l$$CANCEL$',socks,c=True,sep='\n\t')[0])
-			if new_value < len(socks):
-				if what_to_edit[0] == 'f':
-					temp_bytes[11] = bytes([(int.from_bytes(temp_bytes[11], 'big') & 63) + (new_value << 6)])
-				else:
-					temp_bytes[19] = bytes([(int.from_bytes(temp_bytes[19], 'big') & 207) + (new_value << 4)])
-				temp_file+=b''.join(temp_bytes)
-				temp_file+=valori.read()
-				save(f_valori, temp_file)
-				load_database(load=len(args.get('field', '')))
-		elif what_to_edit in ['fkc','skc']:
-			kit = [0,'first'] if what_to_edit[0] == 'f' else [8,'second']
-			if new_value is None:
-				print('\n%s'%' '.join(['%s\033[0m [%s] %s'%(cesc[e],e,f) for e,f in enumerate(colours)]))
-				new_value = [
-					int((lambda x: x if (y:=int(inputPlus('Change first colour (enter to confirm: "%s")?'%colours[x], colours, entC=True)[0])) == len(colours) else y)(vals_already[kit[1]+' socks - colour 1'])),
-					int((lambda x: x if (y:=int(inputPlus('Change second colour (enter to confirm: "%s")?'%colours[x], colours, entC=True)[0])) == len(colours) else y)(vals_already[kit[1]+' socks - colour 2']))
-				]
-			temp_bytes[8+kit[0]] = bytes([(int.from_bytes(temp_bytes[8+kit[0]], 'big') & 31) + ((new_value[0] & 7) << 5)])
-			temp_bytes[9+kit[0]] = bytes([(int.from_bytes(temp_bytes[9+kit[0]], 'big') & 252) + ((new_value[0] & 24) >> 3)])
-			temp_bytes[10+kit[0]] = bytes([(int.from_bytes(temp_bytes[10+kit[0]], 'big') & 224) + new_value[1]])
-			temp_file+=b''.join(temp_bytes)
-			temp_file+=valori.read()
-			save(f_valori, temp_file)
-			load_database(load=len(args.get('field', '')))
+				_doEdits(new_value, cols, kit, vals_already)
 		elif what_to_edit == 'y':
 			if new_value is None: new_value = int(inputPlus('\nEnter strategy\n\t$OPTIONLIST_l$$CANCEL$',strategia,c=True,sep='\n\t')[0])
 			if new_value < len(strategia):
+				if ttmng:
+					_refresh_tmmng(vals_already,'strategy',2 * new_value)
+					write_tmmng()
 				temp_bytes[17] = bytes([(int.from_bytes(temp_bytes[17], 'big') & 31) + (new_value << 5)])
 				temp_file+=b''.join(temp_bytes)
 				temp_file+=valori.read()
 				save(f_valori, temp_file)
 				load_database(load=len(args.get('field', '')))
 		elif what_to_edit == 't':
-			if new_value is None: new_value = int(inputPlus('\nEnter tactics\n\t$OPTIONLIST_l$$CANCEL$',tactics,c=True,sep='\n\t')[0])
-			if new_value < len(tactics):
-				temp_bytes[21] = bytes([(int.from_bytes(temp_bytes[21], 'big') & 3) + (new_value << 2)])
-				temp_file+=b''.join(temp_bytes)
-				temp_file+=valori.read()
-				save(f_valori, temp_file)
-				load_database(load=len(args.get('field', '')))
+			if new_value is None: new_value = int(inputPlus('\nEnter tactics\n\t$OPTIONLIST_l$$CANCEL$',tactics+['Custom'],c=True,sep='\n\t')[0])
+			if new_value == len(tactics) or ttmng or type(new_value) == str:
+				block = False
+				if type(new_value) == int:
+					if new_value < len(tactics): new_value = tactics[new_value]
+					else:
+						while True:
+							new_value = input('Enter formation (e.g. 4d-4-2; d for diamond), [c] to cancel): ')
+							if len(new_value.split('-')) == 3: break
+							if new_value == 'c': 
+								block = True
+								break
+				if not block:
+					new_value = new_value.split('-')
+					diamonds = [''+('d' in v)*'d' for v in new_value]
+					new_value = [min(int(v.replace('d','')),5) for v in new_value]
+					e = 0
+					while True:
+						if e == 3: e = 0
+						if sum(new_value) == 10: break
+						if sum(new_value) > 10:
+							new_value[e] = max(new_value[e]-1,0)
+						if sum(new_value) < 10:
+							new_value[e] = min(new_value[e]+1,5)
+						e+=1
+					formation = [f'{v}{diamonds[e]}' for e,v in enumerate(new_value)]
+					_refresh_tmmng(vals_already,'formation',formation)
+					write_tmmng()
 		elif what_to_edit == 'r':
 			if new_value is None: new_value = int(inputPlus('\nEnter roster size\n\t$OPTIONLIST_l$$CANCEL$',[14,16,18,20],c=True,sep='\n\t')[0])
 			if new_value < 4:
@@ -2696,14 +2897,14 @@ Parameter to edit:
 		elif what_to_edit == 'p':
 			table = True
 			roster = search_players(vals_already['id'], 'team_id', strict=True)['results'] if vals_already['league_id'] <= 10  else search_players(vals_already['nation'], 'international_id', strict = True)['results']
-			pmodify = input('Edit player?\n  %s\n  ----------\n  [c]ancel: '%('\n  '.join(['[%s]: %s  (%s)'%(i,x['name'],x['index_fcdb']) for i,x in enumerate(roster)])))
+			pmodify = input('Edit player?\n  %s\n  ----------\n  [c]ancel: '%('\n  '.join(['[%s]: %s  (%s)'%(i,x['name'],x['index_fcdb']) for i,x in enumerate(sorted(roster,key=lambda x:x['name']))])))
 			if pmodify != 'c':
 				if pmodify == '*': pmodify = ','.join([str(x) for x in range(len(roster))])
 				for x in pmodify.split(','):
 					if x.isnumeric():
 						if int(x) < len(roster):
-							print('\nEditing %s'%roster[int(x)]['name'])
-							for _ in search_players(edit_player(roster[int(x)]['index_fcdb']),'index_fcdb',strict=True)['files'][roster[int(x)]['index_fcdb']]: exec(_)
+							print('\nEditing %s'%sorted(roster,key=lambda x:x['name'])[int(x)]['name'])
+							for _ in search_players(edit_player(sorted(roster,key=lambda x:x['name'])[int(x)]['index_fcdb']),'index_fcdb',strict=True)['files'][sorted(roster,key=lambda x:x['name'])[int(x)]['index_fcdb']]: exec(_)
 					else:
 						print('The value "%s" is not in the list'%x)
 		elif what_to_edit == 'c':
@@ -2723,8 +2924,20 @@ Parameter to edit:
 				load_database(load=len(args.get('field', '')))
 		elif what_to_edit == 'e':
 			roster = sorted([p for p in players if p['id'] in vals_already['squad'] and p['starting'] > 128], key=lambda w:w['name'])
+			menu_entries = [f"{_['name']} ({_['role']}, {_['average']})" for _ in roster]
 			if new_value is None:
-				new_taker = int(inputPlus('\nSelect player:\n  $OPTIONLIST_l$$CANCEL$',roster, field="['name']+' ('+o['role']+', '+str(o['average'])+')'", c=True, sep='\n  ')[0])
+				if ttmng or input('Select a piece taker for each set piece [yn]? ') == 'y':
+					roster = ttmng.get('lineup', [p['id'] for p in roster])
+					menu_entries = [f"{players_db[_]['name']} ({players_db[_]['role']}, {players_db[_]['average']})" for _ in roster]
+					spt = []
+					for piece in setpiece:
+						spt.append(int(inputPlus('\nSelect taker of {}:\n  $OPTIONLIST_l$$CANCEL$'.format(piece),menu_entries, c=True, sep='\n  ')[0]))
+						if spt[-1] == len(roster): return
+					spt = [roster[_] for _ in spt]
+					_refresh_tmmng(vals_already,'set_piece',spt)
+					write_tmmng()
+					return
+				new_taker = int(inputPlus('\nSelect player:\n  $OPTIONLIST_l$$CANCEL$',menu_entries, c=True, sep='\n  ')[0])
 				if new_taker < 11:
 					new_value = roster[new_taker]
 				else: return
@@ -2735,47 +2948,19 @@ Parameter to edit:
 			old_average = new_value['average']
 
 			current_max = sorted(roster, key = lambda w: w['shot power'])[-1]['shot power']
-			if current_max < 99:
-				edit_player(new_value['index_fcdb'],field='12',value=current_max+4)
-			else:
-				for _ in roster:
-					if _['role'] == 'GK': continue
-					if _['shot power'] == 99: edit_player(_['index_fcdb'],field='12',value='95')
-				edit_player(new_value['index_fcdb'],field='12',value=99)
-
-			if args.get('value', None): load_database()
-
-			if old_average > 75:
-				if old_score1 < 83:
-					edit_player(new_value['index_fcdb'],field='15',value=old_score1+8) #accuracy
-					if args.get('value', None): load_database()
-				if old_score2 < 83:
-					edit_player(new_value['index_fcdb'],field='8',value=old_score2+4) #passing
-
-			load_database()
-
-			target_player = [p for p in players if p['index_fcdb'] == new_value['index_fcdb']][0]
-
-			if target_player['average'] != old_average:
-				skillsToDiminish = [1,14,3,5,9,10,0,16]
-				score_diff = (target_player['shot power'] - old_score) + (target_player['shot accuracy'] - old_score1) + (target_player['passing'] - old_score2)
-				idx = -1
-				new_skills = [target_player[fieldopedia[r]['db']] for r in skill_fields]
-				while True:
-					idx += 1
-					if idx == len(skillsToDiminish): idx -= len(skillsToDiminish)
-					new_skills[skillsToDiminish[idx]] -= 4
-					score_diff -= 4
-					if math.floor(sum(new_skills)/len(new_skills)) == old_average: break
-					if score_diff == 0: break
-				edit_player(new_value['index_fcdb'], field='*', value=''.join((str(s) for s in new_skills)), verbose=False)
-
-				load_database()
-
-			print(sorted([p for p in players if p['id'] in vals_already['squad'] and p['starting'] > 128], key=lambda w:w['shot power'])[-1]['name'], 'is the new set piece taker of', vals_already['names'][-1])
+			players_hitting_max = [x for x in roster if x['shot power'] == current_max]
+			for p in players_hitting_max:
+				edit_player(p['index_fcdb'],field='12',value=max(current_max-4,39))
+				edit_player(p['index_fcdb'],field='13',value=min(p['shot bias']+4,99))
+			changedPlayers = {target_player['id']: {field:target_player[fieldopedia[field]['db']] for field in skill_fields} for target_player in players_hitting_max}
+			edit_player(new_value['index_fcdb'],field='13',value=max(new_value['shot bias']-(current_max-new_value['shot power']),39))
+			edit_player(new_value['index_fcdb'],field='12',value=min(current_max+4,99))
+			newSPT = sorted([p for p in players if p['id'] in vals_already['squad'] and p['starting'] > 128], key=lambda w:w['shot power'])[-1]['name']
+			strtpr = f"{newSPT} is the new set piece taker of {vals_already['names'][-1]}"
 			if args.get('returnValues', None):
-				target_player = [p for p in players if p['index_fcdb'] == new_value['index_fcdb']][0]
-				return {field:target_player[fieldopedia[field]['db']] for field in skill_fields}
+				changedPlayers[new_value['id']] = {field:new_value[fieldopedia[field]['db']] for field in skill_fields}
+				return changedPlayers
+			print(strtpr)
 		else:
 			what_to_edit = None
 			valid = False
@@ -2843,7 +3028,7 @@ def convoca(team_data, *lax, **kwargs):
 	auto_tactics = False
 	while True:
 		try:
-			new_squad[x] = int(input('Call player %s (current: %s, enter to confirm): '%(str(x+1), directory[already[x]])))
+			new_squad[x] = int(input(f'Call player {str(x+1)}{" (current: {{directory[already[x]]}}, enter to confirm)" if len(already)>0 else ""}: '))
 		except ValueError as e:
 			if str(e)[-2] == 'c':
 				cancelled = True
@@ -2864,9 +3049,9 @@ def convoca(team_data, *lax, **kwargs):
 					lists[search_in].remove(g)
 					count[['goalies','defs','midf','strikers'].index(search_in)] += 1
 				tactics_caps = {
-					'5-4-1':[2,8,7,3],
-					'5-3-2':[2,8,6,4],
-					'4-5-1':[2,7,8,3],
+					'1-4-4-1':[2,8,7,3],
+					'1-4-3-2':[2,8,6,4],
+					'1-3-5-1':[2,7,8,3],
 					'1-3-4-2':[2,7,7,4],
 					'1-3-3-3':[2,7,5,6],
 					'4-4-2':[2,6,7,5],
@@ -2930,7 +3115,7 @@ def convoca(team_data, *lax, **kwargs):
 		return bytes(new_squad)
 
 def show_leagues(**kwargs): 
-	def _edit_league(l):
+	def _edit_league(league_source, l):
 		os.system(clear_screen)
 		print('%s'%('━'*80))
 		print(l['name'].center(80))
@@ -2946,8 +3131,9 @@ def show_leagues(**kwargs):
 			print('\033[29C',t['names'][-1])
 		print('%s'%('━'*80))
 		print()
-		standard_query = f"[r]ename league / [t]ransfer teams / change [s]ize / [c]ancel"
+		menu_items = ["[r]ename league","[t]ransfer teams","change [s]ize","[c]ancel"]
 		while True:
+			standard_query = ' / '.join(menu_items) if l['db_position'] < 11 else ' / '.join(menu_items[:-1]+["restore [o]riginal"]+menu_items[-1:])
 			print('\033[J\033[1A\033[41;37m\n',standard_query,"\033[0m", sep="",end = "\r")
 			k = chr(getter())
 			if k == 'r':
@@ -2958,24 +3144,27 @@ def show_leagues(**kwargs):
 				t = int(inputPlus('\033[J\nSelect team:\n  $OPTIONLIST_l$$CANCEL$', [t['names'][-1] for t in tms], c=True, sep='\n  ')[0])
 				if t < len(tms):
 					swap1 = tms[t]
+					if 'Group' in l['name']: league_source = sorted(leagues, key=lambda x: x['name'])+[{'name':'National Teams','teams':sorted([t['id'] for t in teams if t['league_id']==11])}]
 					ls=[s for s in league_source if s['name'] != l['name']]
 					l2i = int(inputPlus('\nSelect destination league:\n  $OPTIONLIST_l$$CANCEL$', [y['name'] for y in ls]+['Non-League'], c=True, sep='\n  ')[0])
-					if l2i < 11:
-						if l2i < 10:
-							l2 = ls[l2i]
-							tms = sorted([t for t in teams if t['id'] in l2['teams']], key=lambda x:x['names'][-1])
-						else:
-							tms = [t for t in teams if t['id'] in non_league_teams]
-						t = int(inputPlus('\nSelect team to swop:\n  $OPTIONLIST_l$$CANCEL$', [t['names'][-1] for t in tms], c=True, sep='\n  ')[0])
-						if t < len(tms):
-							swap2 = tms[t]
-							if input(f'\nSwapping {swap1["names"][-1]} with {swap2["names"][-1]}. Proceed? [yn] ') == 'y':
-								l['teams'][l['teams'].index(swap1['id'])]=swap2['id']
-								FCDB[globalDB['FCDB'][f'league {l["db_position"]}']['position']][globalDB['FCDB'][f'league {l["db_position"]}']['teams in league']] = l['teams']
-								if l2i < 10:
-									l2['teams'][l2['teams'].index(swap2['id'])]=swap1['id']
-									FCDB[globalDB['FCDB'][f'league {l2["db_position"]}']['position']][globalDB['FCDB'][f'league {l2["db_position"]}']['teams in league']] = l2['teams']
-								rebuildDbFiles()
+					
+					if l2i < len(league_source)-1:
+						l2 = ls[l2i]
+						tms = sorted([t for t in teams if t['id'] in l2['teams']], key=lambda x:x['names'][-1])
+					else:
+						tms = [t for t in teams if t['id'] in non_league_teams]
+					t = int(inputPlus('\nSelect team to swop:\n  $OPTIONLIST_l$$CANCEL$', [t['names'][-1] for t in tms], c=True, sep='\n  ')[0])
+					if t < len(tms):
+						swap2 = tms[t]
+						if input(f'\nSwapping {swap1["names"][-1]} with {swap2["names"][-1]}. Proceed? [yn] ') == 'y':
+							l['teams'][l['teams'].index(swap1['id'])]=swap2['id']
+							FCDB[globalDB['FCDB'][f'league {l["db_position"]}']['position']][globalDB['FCDB'][f'league {l["db_position"]}']['teams in league']] = l['teams']
+							if l2i < 10 and not 'Group' in l['name']:
+								l2['teams'][l2['teams'].index(swap2['id'])]=swap1['id']
+								FCDB[globalDB['FCDB'][f'league {l2["db_position"]}']['position']][globalDB['FCDB'][f'league {l2["db_position"]}']['teams in league']] = l2['teams']
+							rebuildDbFiles()
+							t_fsh = f'{tms[t]["id"]:0>4}'
+							if tms[t]['league_id'] != 11 and not os.path.isfile('/'.join([gamepath.replace('common','fepack'),'IGFLAGS',f'{t_fsh}.pak'])): feflags(tms[t]['id'])
 				return
 			elif k =='s':
 				while True:
@@ -3030,6 +3219,23 @@ def show_leagues(**kwargs):
 				FCDB[globalDB['FCDB']['start index of player data']]+=offset
 				rebuildDbFiles()
 				return
+			elif k == 'o':
+				original = json.load(open(Fifapath+'/original_natTeams.json', 'r'))
+				new_size = original[str(l['db_position'])]['size']
+				new_teams = original[str(l['db_position'])]['teams'] 
+				if new_size != l['size']:
+					new_size_value = int(((new_size:=int(new_size)) + .5)*1024)
+					offset = 2*(math.ceil(new_size/2)*2-math.ceil(l['size']/2)*2)
+					FCDB[globalDB['FCDB'][f'league {l["db_position"]}']['position']][globalDB['FCDB'][f'league {l["db_position"]}']['league size']] = new_size_value
+					for i in range(FCDB[globalDB['FCDB']['number of leagues']]):
+						if i <= l["db_position"]: continue
+						FCDB[globalDB['FCDB']['league indexes']][i]+=offset
+					FCDB[globalDB['FCDB']['start index of team data']]+=offset
+					FCDB[globalDB['FCDB']['start index of player data']]+=offset
+				if new_teams != l['teams']:
+					FCDB[globalDB['FCDB'][f'league {l["db_position"]}']['position']][globalDB['FCDB'][f'league {l["db_position"]}']['teams in league']] = new_teams
+					rebuildDbFiles()
+				return
 			elif k =='c':
 				return
 	while True:
@@ -3068,7 +3274,7 @@ def show_leagues(**kwargs):
 			if k == 'e':
 				if current == 'n':
 					if input('\033[2A\033[31mWARNING: editing of national team groups is completely untested. Proceed at your own risk? [yn]\033[0m ') != 'y': continue
-				_edit_league(league_source[currLeague])
+				_edit_league(league_source,league_source[currLeague])
 			if k == 'right': currLeague = currLeague + 1 if currLeague < len(league_boxes)-1 else 0
 			if k == 'left': currLeague = currLeague - 1 if currLeague > 0 else len(league_boxes)-1
 
@@ -3161,9 +3367,30 @@ def commit():
 	shutil.copyfile(f_nomi, f_nomi.replace(Fifapath, gamepath))
 	shutil.copyfile(f_squadre, f_squadre.replace(Fifapath, gamepath))
 	shutil.copyfile(f_interfaccia, f_interfaccia.replace(Fifapath, gamepath))
+	if platform.system() == "Windows":
+		currdir = os.getcwd()
+		if len(decomp_path) == 0:
+			while True:
+				nf = input('Enter folder of Refpack compressor/decompressor executables: ')
+				if len(nf) == 0: return
+				if os.path.isdir(nf) and os.path.isfile(os.path.join(nf,'compressd.exe')) and os.path.isfile(os.path.join(nf,'decompressd.exe')):
+					custom_vals['decomp_path'] = [nf]
+					json.dump(custom_vals, open('fifa_config.json', 'w'), indent=2)
+					decomp_path = [nf]
+					break
+				else:
+					print('Utilities not found.')
+					return
+		os.chdir(decomp_path[0])
+		os.system(f'compressd "{Fifapath}/tmmng.dec" "{gamepath.replace("common","user")}/tmmng.db"')
+		feflags_file = '/'.join([gamepath.replace('common','fepack'),'global','feflags.pak'])
+		if os.path.isfile('n_feflags.pak'): os.system(f'compressd n_feflags.pak "{feflags_file}"')
+		os.chdir(currdir)
 	input('Changes saved. Return to main menu. ')
 
 def restore(*args):
+	if not args:
+		if input('Confirm restoring [yn]? ') != 'y': return
 	print('Copying database...' if args else 'Restoring...')
 	home = os.path.expanduser('~')
 	shutil.copyfile(f_valori.replace(Fifapath, gamepath), f_valori)
@@ -3235,7 +3462,7 @@ def match_day():
 
 	rls = dict(GK=0,RB=2,RCB=3,SW=1,CB=3,LCB=4,LB=5,RM=6,RCM=7,CM=8,LCM=9,LM=10,RF=11,CF=12,LF=13)
 	for x in players:
-		px_role = x['role'] #start new
+		px_role = x['role']
 		if x['starting'] == 196:
 			if px_role == 'CB': px_role = 'LCB'
 			elif px_role == 'CM': px_role = 'LCM'
@@ -3263,7 +3490,7 @@ def match_day():
 			if l2 < 12:
 				if x['starting'] > 128: teams1['St'].append(2)
 				else: teams1['St'].append(1)
-			else: teams1['St'].append(nt_lineup(t2sq, t2ta, x['id'])) #end new
+			else: teams1['St'].append(nt_lineup(t2sq, t2ta, x['id']))
 	table0 = pd.DataFrame(data = teams0)
 	table0 = table0.sort_values(by=['St','Role'])
 	table0 = table0[['N', 'Name','P','Nat','AV']]
@@ -3433,37 +3660,9 @@ def export_database():
 		print(json.dumps(complete_db,indent=2),file=open(os.path.join(dir,'complete_db.json'),'w+'))
 		input('The data has been saved. Hit enter to return to the main menu.')
 		load_database()
-	from tkinter.filedialog import askdirectory
-	rootWin = tk.Tk()
-	rootWin.attributes('-alpha', 0)
-	if platform.system() == 'Windows':
-		return
-	else:
-		try:
-			os.system('''/usr/bin/osascript -e 'tell app "Finder" to set frontmost of process "Python" to true' ''')
-		except:
-			rootWin.lift()
-			rootWin.focus_force()
-		else:
-			rootWin.withdraw()
-			rootWin.update()
-	dir=askdirectory(title='Choose destination folder', initialdir=os.path.expanduser('~'))
-	rootWin.bind("<Destroy>", _export_to(dir))
-	rootWin.destroy()
-	if platform.system() == 'Windows':
-		results = []
-		top_windows = []
-		win32gui.EnumWindows(windowEnumerationHandler, top_windows)
-		for i in top_windows:
-			if i[1].lower().find('command prompt') > -1:
-				win32gui.ShowWindow(i[0],5)
-				win32gui.SetForegroundWindow(i[0])
-				break
-	else:
-		try:
-			os.system('''/usr/bin/osascript -e 'tell app "Finder" to set frontmost of process "Terminal" to true' ''')
-		except:
-			pass
+		
+	dir = input('Enter destination folder ([c]ancel): ').strip()
+	if len(dir) > 0 and os.path.isdir(dir) and dir != 'c': _export_to(dir)
 
 def list_by_role():
 	maxL = os.get_terminal_size().lines
@@ -3522,12 +3721,427 @@ def list_by_role():
 			if starting_page < len(by_role_pages[role_carousel[starting_pos]])-1:
 				starting_page += 1
 	return
+	
+def createNatTeamFlag(id):
+	global decomp_path
+	while True:
+		path = input('Enter path of flag image ([c]ancel): ')
+		if os.path.isfile(path): break
+		if path == 'c': return
+		
+	currdir = os.getcwd()
+	dp = decomp_path[0]
+	if len(dp) == 0:
+		while True:
+			nf = input('Enter folder of Refpack compressor/decompressor executables: ')
+			if len(nf) == 0: return
+			if os.path.isdir(nf) and os.path.isfile(os.path.join(nf,'compressd.exe')) and os.path.isfile(os.path.join(nf,'decompressd.exe')):
+				custom_vals['decomp_path'] = [nf]
+				json.dump(custom_vals, open('fifa_config.json', 'w'), indent=2)
+				decomp_path, dp = [nf], dp
+				break
+			else:
+				print('Utilities not found.')
+				return
+	os.chdir(dp)
+	
+	flag_original = Image.open(path)
+	flag_resize_big = flag_original.resize((60,39))
+	
+	flag_big_256 = flag_resize_big.convert("P", palette=Image.ADAPTIVE, colors=256)
+	
+	flag_big_bytes = io.BytesIO()
+	flag_big_256.save(flag_big_bytes, format='BMP')
+	flag_big_bytes = flag_big_bytes.getvalue()
+	flag_fsh = b''
+	fsh_header = b'SHPI\\\r\x00\x00\x01\x00\x00\x00GIMX'+id.encode('ascii')+b'\x18\x00\x00\x00{4\t\x00<\x00\'\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+	flag_fsh += fsh_header
+	bmp_body = flag_big_bytes[1078:1078+60*39]
+	bmp_body = [bmp_body[i:i+60] for i in range(0, len(bmp_body), 60)]
+	bmp_body = b''.join(bmp_body[::-1])
+	flag_fsh += bmp_body
+	flag_fsh += b'\x2a' + 15*b'\x00'
+	bmp_palette = [flag_big_bytes[54+i:54+i+3]+b'\xff' for i in range(0, 256*4, 4)]
+	flag_fsh += b''.join(bmp_palette)
+	o = open('tmp.fsh','wb')
+	o.write(flag_fsh)
+	o.close()
+	os.system(f'compressd "tmp.fsh" "{"/".join([gamepath.replace("common","fepack"),"igflags",id])}.pak"')
+	
+	flag_resize_sma = flag_original.resize((28,20))
+	flag_sma_256 = flag_resize_sma.convert("P", palette=Image.ADAPTIVE, colors=256)
+	flag_sma_bytes = io.BytesIO()
+	flag_sma_256.save(flag_sma_bytes, format='BMP')
+	flag_sma_bytes = flag_sma_bytes.getvalue()
+	flag_fsh = b''
+	fsh_header = b'\x7b\x40\x02\x00\x1c\x00\x14\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+	flag_fsh += fsh_header
+	bmp_body = flag_sma_bytes[1078:1078+28*20]
+	bmp_body = [bmp_body[i:i+28] for i in range(0, len(bmp_body), 28)]
+	bmp_body = b''.join(bmp_body[::-1])
+	flag_fsh += bmp_body
+	flag_fsh += b'\x24\x10\x03\x00\x00\x01\x01\x00\x00\x01' + 6*b'\x00'
+	bmp_palette = [b''.join([flag_sma_bytes[54+i+2:57+i],flag_sma_bytes[54+i+1:56+i],flag_sma_bytes[54+i:55+i]]) for i in range(0, 256*4, 4)]
+	flag_fsh += b''.join(bmp_palette)
+	flag_fsh += b'\x006F\x00\x00\x00\x4C\x00\x00\x00\x76\x70\x61\x74\x68\x3D\x43\x3A\x5C\x46\x49\x46\x41\x27\x39\x38\x5C\x66\x65\x62\x69\x74\x73\x5C\x66\x6C\x61\x67\x73\x5C\x32\x30\x58\x32\x38\x5C\x66\x69\x6E\x61\x6C\x5C\x74\x67\x61\x73\x5C\x0D\x0A\x66\x6E\x61\x6D\x65\x3D'+id.encode('ascii')+b'x2E\x74\x67\x61\x0D\x0A\x73\x6E\x61\x6D\x65\x3D'+id.encode('ascii')+b'\x00'	
+	os.chdir(currdir)
+	feflags(add=id,data=flag_fsh)
 
-def initialize(): 
+def feflags(*spTeam,**kwargs):
+	global decomp_path
+	feflags_file = '/'.join([gamepath.replace('common','fepack'),'global','feflags.pak'])
+	currdir = os.getcwd()
+	dp = decomp_path[0]
+	if len(dp) == 0:
+		while True:
+			nf = input('Enter folder of Refpack compressor/decompressor executables: ')
+			if len(nf) == 0: return
+			if os.path.isdir(nf) and os.path.isfile(os.path.join(nf,'compressd.exe')) and os.path.isfile(os.path.join(nf,'decompressd.exe')):
+				custom_vals['decomp_path'] = [nf]
+				json.dump(custom_vals, open('fifa_config.json', 'w'), indent=2)
+				decomp_path, dp = [nf], nf
+				break
+			else:
+				print('Utilities not found.')
+				return
+	os.chdir(dp)
+	if not os.path.isfile('n_feflags.pak'):
+		os.system(f'decompressd feflags_original.pak n_feflags.pak')
+	feflags = open('n_feflags.pak','rb')
+	feflags.seek(0,0)
+	feflags_parts = []
+	feflags_parts.append(feflags.read(16))
+	while True:
+		if len(feflags_parts) > 1 and feflags.tell() == feflags_parts[1]['index']: break
+		name = feflags.read(4)
+		index = feflags.read(4)
+		feflags_parts.append({'name':name.decode('ascii'), 'index':int.from_bytes(index, byteorder='little')})
+	for e,_ in enumerate(feflags_parts):
+		if e == 0: continue
+		if e < len(feflags_parts)-1:
+			_['image'] = feflags.read(feflags_parts[e+1]['index']-_['index'])
+		else:
+			_['image'] = feflags.read()
+	if (teamToAdd:=kwargs.get('add',None)):
+		data = kwargs['data']
+		if teamToAdd not in [f['name'] for f in feflags_parts]:
+			for image in feflags_parts[1:]:
+				image['index'] += 8
+			feflags_parts.append({'name':teamToAdd,'index':os.path.getsize('n_feflags.pak') + 8,'image':data})
+		else:
+			position = [f['name'] for f in feflags_parts].index(teamToAdd)
+			start_index = feflags_parts[position]['index']
+			end_index = start_index + len(data)
+			difference = end_index - (feflags_parts[position+1]['index'] if position < len(feflags_parts) -1 else os.path.getsize('n_feflags.pak'))
+			for f in feflags_parts[position+1:]:
+				f['index'] += difference
+			feflags_parts[position] = ({'name':teamToAdd,'index':start_index,'image':data})
+	else:
+		tmn_flags = {}
+		for t in teams:
+			if t['league_id'] < 11: continue
+			t_fsh = f'{t["id"]:0>4}'
+			t_fsh_data = [f for f in feflags_parts[1:] if f['name'] == t_fsh]
+			if len(t_fsh_data) == 0: continue
+			tmn_flags[t['names'][-1]] = dict(t_fsh_data[0])
+		for t in teams:
+			if t['league_id'] >= 11: continue
+			if spTeam and spTeam[0] != t['id']: continue
+			t_fsh = f'{t["id"]:0>4}'
+			t_fsh_data = dict(tmn_flags.get(t_nation,tmn_flags['USA']))
+			t_fsh_data['image'] = t_fsh_data['image'].replace(t_fsh_data['name'].encode('ascii'),t_fsh.encode('ascii'))
+			shutil.copyfile('/'.join([gamepath.replace('common','fepack'),'IGFLAGS',f'{t_fsh_data["name"]}.pak']), '/'.join([gamepath.replace('common','fepack'),'IGFLAGS',f'{t_fsh}.pak']))
+			bigFlagFile = open('/'.join([gamepath.replace('common','fepack'),'IGFLAGS',f'{t_fsh}.pak']),'rb')
+			bigFlag = bigFlagFile.read().replace(t_fsh_data['name'].encode('ascii'),t_fsh.encode('ascii'))
+			bigFlagFile.close()
+			bigFlagFile = open('/'.join([gamepath.replace('common','fepack'),'IGFLAGS',f'{t_fsh}.pak']),'wb')
+			bigFlagFile.write(bigFlag)
+			bigFlagFile.close()
+			t_fsh_data['name'] = t_fsh
+			t_fsh_data['index'] = feflags_parts[-1]['index']+len(feflags_parts[-1]['image'])
+			feflags_parts.append(t_fsh_data)
+			for f in feflags_parts[1:]:
+				f['index'] += 8
+	
+	new_file = feflags_parts[0][:8]+struct.pack('<h',len(feflags_parts[1:]))+feflags_parts[0][10:]
+	for f in feflags_parts[1:]:
+		new_file += f['name'].encode('ascii')
+		new_file += struct.pack('<l',f['index'])
+	for f in feflags_parts[1:]:
+		new_file += f['image']
+	nff = open('n_feflags.pak','wb+')
+	nff.write(new_file)
+	nff.close()
+	os.chdir(currdir)
+	return True
+
+def write_tmmng():
+	global tmmng_db
+	startByte = 32
+	n_teams = len(tmmng_db)
+	tempFile = []
+	tempFile.append(b'FCDB')
+	tempFile.append(b'\x00\x00\x01\x00')
+	tempFile.append(b'\x00\x00')
+	tempFile.append(b'\x00\x00')
+	tempFile.append(startByte.to_bytes(1,'big'))
+	tempFile.append(b'\x00'*7)
+	tempFile.append(b'\x00\x00')
+	tempFile.append(b'\x00'*(startByte-len(b''.join(tempFile))))
+	tempFile.append(n_teams.to_bytes(3,'little'))
+	tempFile.append(b'\x06')
+	for id in sorted(list(tmmng_db.keys())):
+		t = tmmng_db[id]
+		tactics = t['formation']
+		tmp_bytes = id.to_bytes(2,'little')
+		tmp_bytes = int.from_bytes(tmp_bytes, 'big') << 8
+		defenders = int(tactics[0].split('d')[0])
+		midfielders = int(tactics[1].split('d')[0])
+		forwards = int(tactics[2].split('d')[0])
+		d_def = 'd' in tactics[0]
+		d_mid = 'd' in tactics[1]
+		d_for = 'd' in tactics[2]
+		tmp_bytes += (midfielders & 3) << 14
+		tmp_bytes += (midfielders & 4) >> 2
+		tmp_bytes += defenders-d_def << 11
+		tmp_bytes += forwards << 1
+		tmp_bytes += d_for << 7
+		tmp_bytes += d_mid << 6
+		tmp_bytes += d_def << 5
+		tmp_bytes += 16
+		tempFile.append(tmp_bytes.to_bytes(3,'big'))
+		tempFile.append(b'\x00')
+		for i in range(5):
+			pos1 = t['positions'][i*2]
+			pos2 = t['positions'][i*2+1]
+			posBytes = [0,0,0]
+			posBytes[0] = ((pos1&15) << 4) | ((pos1 >> 8) & 15)
+			posBytes[1] = ((pos2 >> 8) << 4) | ((pos1 & 240) >> 4)
+			posBytes[2] = pos2 & 255
+			tempFile.append(bytes(posBytes))
+			abByte = (t['attack'][i*2] | t['attack'][i*2+1] << 4).to_bytes(1,'big')
+			tempFile.append(abByte)
+		stratAnd11 = [0,0]
+		pos11 = t['positions'][-1]
+		stratAnd11[0] = ((pos11&15) << 4) | ((pos11 >> 8) & 15)
+		stratAnd11[1] = (t['strategy'] << 4) | ((pos11 & 240) >> 4)
+		tempFile.append(bytes(stratAnd11))
+		tempFile.append(b'\x00\x00\x00\x00\x00')
+		tempFile.append((t['attack'][-1] << 4).to_bytes(1,'big'))
+		tempFile.append(3*b'\x00')
+		tempFile.append((t['aggression'][-1] << 4).to_bytes(1,'big'))
+		tmppl = b''
+		for i,p in enumerate(t['lineup']):
+			pl_id = int(p, base=16)
+			if i % 2 == 0:
+				tmppl = pl_id.to_bytes(2,'big')
+			else:
+				tmppl = int.from_bytes(tmppl, 'big') << 16
+				tmppl += (pl_id & 64512) >> 2
+				tmppl += (pl_id & 768) << 14
+				tmppl += (pl_id & 60) >> 2
+				tmppl += (pl_id & 3) << 14
+				if i > 2: tmppl += t['aggression'][i//2] << 4
+				tmppl = tmppl.to_bytes(4,'big')
+				tempFile.append(tmppl)
+				tmppl = b''
+		for i,p in enumerate(t['set_piece']):
+			pl_id = int(p, base=16)
+			if i % 2 == 1:
+				tmppl = pl_id.to_bytes(2,'big')
+				if i == 9: tempFile.append(tmppl)
+			else:
+				tmppl = int.from_bytes(tmppl, 'big') << 16
+				tmppl += (pl_id & 64512) >> 2
+				tmppl += (pl_id & 768) << 14
+				tmppl += (pl_id & 60) >> 2
+				tmppl += (pl_id & 3) << 14
+				tmppl += t['aggression'][i//2+5] << 4
+				tmppl = tmppl.to_bytes(4,'big')
+				tempFile.append(tmppl)
+				tmppl = b''
+	tempFile[2] = len(b''.join(tempFile)).to_bytes(2,'little')
+	tempFile[6] = (len(b''.join(tempFile))-startByte).to_bytes(2,'little')
+	o = open(f'{Fifapath}/tmmng.dec','wb')
+	o.write(b''.join(tempFile))
+	o.close()
+	data = io.BytesIO()
+	data.write(b''.join(tempFile))
+	read_tmmng(data)		
+
+def add_tmmng_to_sav():
+	currdir = os.getcwd()
+	os.chdir(decomp_path[0])
+	for f in [_ for _ in sorted(os.listdir(f'{path_pcloud}/FIFA/ingame/')) if _.split('.')[-1].lower() == 'sav' and _[:4].lower() == 'slot']:
+		print(f'Working on {f}')
+		savfile = f'{gamepath.replace("common","user")}/{f}'
+		savfile_content = open(savfile,'rb').read()
+		tmmng = b'\x10\xfb' + savfile_content.split(b'\x10\xfb')[-1]
+		tmp = open('sav.tmp','wb')
+		tmp.write(tmmng)
+		tmp.close()
+		os.system(f'decompressd "sav.tmp" "sav.tmp.dec"')
+		tmmng = open('sav.tmp.dec','rb').read().split(b'\x00\x05')
+		os.chdir(currdir)
+		new_bit = open(f'{Fifapath}/tmmng.dec','rb').read()[32:]
+		n_teams = int.from_bytes(new_bit[:2],'little')
+		os.chdir(decomp_path[0])
+		old_teams = int.from_bytes(tmmng[1][:2],'little')
+		length_old_bit = 76*old_teams+4
+		tmmng[1] = new_bit + tmmng[1][length_old_bit:]
+		tmmng = b'\x00\x05'.join(tmmng)
+		tmmng = tmmng[:20] + (76*n_teams+4).to_bytes(4,'little') + tmmng[24:]
+		tmp = open('sav.tmp.dec','wb')
+		tmp.write(tmmng)
+		tmp.close()
+		os.system(f'compressd "sav.tmp.dec" "sav.tmp"')
+		new_bit = open('sav.tmp','rb').read()
+		savfile_content = savfile_content.split(b'\x10\xfb')
+		savfile_content[-1] = new_bit[2:]
+		savfile_content = b'\x10\xfb'.join(savfile_content)
+		new_length = len(savfile_content)
+		savfile_content = savfile_content[:68]+(new_length-8).to_bytes(4,'little')+savfile_content[72:]
+		savfile_output = open(savfile,'wb')
+		savfile_output.write(savfile_content)
+		savfile_output.close()
+	os.chdir(currdir)
+	
+def read_tmmng(*arg,**kwargs):
+	global decomp_path, tmmng_db
+	t_verbose = kwargs.get('verbose',False)
+	currdir = os.getcwd()
+	if kwargs.get('refresh',None) or not os.path.isfile(f'{Fifapath}/tmmng.dec'):
+		if platform.system() != 'Windows': return
+		if len(decomp_path) == 0:
+			while True:
+				nf = input('Enter folder of Refpack compressor/decompressor executables: ')
+				if len(nf) == 0: return
+				if os.path.isdir(nf) and os.path.isfile(os.path.join(nf,'compressd.exe')) and os.path.isfile(os.path.join(nf,'decompressd.exe')):
+					custom_vals['decomp_path'] = [nf]
+					json.dump(custom_vals, open('fifa_config.json', 'w'), indent=2)
+					decomp_path = [nf]
+					break
+				else:
+					print('Utilities not found.')
+					return
+		os.chdir(decomp_path[0])
+		if os.path.isfile(tmmng): os.system(f'decompressd "{tmmng}" "{Fifapath}/tmmng.dec"')
+		else: return
+	tmmng = open(f'{Fifapath}/tmmng.dec', 'rb')
+	if arg: tmmng = arg[0]
+	if t_verbose:
+		tmmng.seek(8,0)
+		print ('file size:', int.from_bytes(tmmng.read(2),'little'))
+	tmmng.seek(12,0)
+	init_byte=int.from_bytes(tmmng.read(1),'little')
+	if t_verbose:
+		print ('init byte:', init_byte)
+		tmmng.seek(20,0)
+		print ('whole team-data length:', team_data_length:=int.from_bytes(tmmng.read(2),'little'))
+	tmmng.seek(init_byte,0)
+	n_teams = int.from_bytes(tmmng.read(2),'little')
+	if t_verbose:
+		print('number of teams:', n_teams)
+	tmmng.seek(2,1)
+	for i in range(n_teams):
+		teamBytes = tmmng.read(2)
+		teamBytes = struct.unpack('<h', (teamBytes[0].to_bytes(1, 'little') + (teamBytes[1]&3).to_bytes(1, 'little')))[0]
+		if t_verbose:
+			team = None
+			for t in teams:
+				if t['id'] == teamBytes:
+					team = t
+					break
+			print(team['names'][-1])
+		db_entry = tmmng_db.setdefault(teamBytes,{})
+		tmmng.seek(-1,1)
+		tactics_bits = tmmng.read(2)
+		midfield = (tactics_bits[0] & 192) >> 6
+		def_l1 = (tactics_bits[0] & 56) >> 3
+		def_l2 = (tactics_bits[0] & 12) >> 2
+		mid_bit = tactics_bits[1] & 1
+		strikers = (tactics_bits[1] & 14) >> 1
+		att_line = (tactics_bits[1] & 128) >> 7
+		mid_line = (tactics_bits[1] & 64) >> 6
+		def_line = (tactics_bits[1] & 32) >> 5
+		if t_verbose: print(midfield,def_l1,def_l2,strikers,sep='\n')
+		formation = [int(def_l1)+int(def_line),int(midfield+4*mid_bit),int(strikers)]
+		if t_verbose: print(formation, ['diamond'*y for y in [int(att_line),int(mid_line),int(def_line)]])
+		diamond = ['d'*y for y in [int(def_line),int(mid_line),int(att_line)]]
+		db_entry['formation'] = [f'{f}{diamond[e]}' for e,f in enumerate(formation)]
+		db_entry['positions'] = []
+		db_entry['aggression'] = [0] * 11
+		db_entry['attack'] = []
+		tmmng.seek(1,1)
+		for i in range(5):
+			posBytes = tmmng.read(3)
+			pos1 = ((posBytes[1] & 15) << 4 | (posBytes[0] & 240) >> 4) | ((posBytes[0] & 15) << 8)
+			pos2 = posBytes[2] | ((posBytes[1] & 240) << 4)
+			db_entry['positions'].append(pos1)
+			db_entry['positions'].append(pos2)
+			abByte = tmmng.read(1)
+			abByte1 = abByte[0] & 15
+			abByte2 = (abByte[0] & 240) >> 4
+			db_entry['attack'].append(abByte1)
+			db_entry['attack'].append(abByte2)
+		stratAnd11 = tmmng.read(2)
+		db_entry['positions'].append(((stratAnd11[1] & 15) << 4 | (stratAnd11[0] & 240) >> 4) | ((stratAnd11[0] & 15) << 8))
+		db_entry['strategy'] = (stratAnd11[1] & 240) >> 4
+		if t_verbose: print('Strategy: ',db_entry['strategy'])
+		tmmng.seek(5,1)
+		db_entry['attack'].append((tmmng.read(1)[0] & 240) >> 4)
+		tmmng.seek(3,1)
+		db_entry['aggression'][-1] = (tmmng.read(1)[0] & 240) >> 4
+		init_players = tmmng.tell()
+		db_entry['lineup'] = []
+		for i in range(11):
+			if i % 2 == 0:
+				pl_bytes = tmmng.read(2)
+				pl_id = pl_bytes[0].to_bytes(1, 'little') + (pl_bytes[1]&63).to_bytes(1, 'little')
+			else:
+				tmmng.seek(-1,1)
+				pl_bytes = tmmng.read(3)
+				pl_id = (((pl_bytes[1] & 63) << 2) + ((pl_bytes[0]&192) >>6)).to_bytes(1, 'little') + (((pl_bytes[2]
+				& 15)  << 2) + ((pl_bytes[1] & 192) >> 6)).to_bytes(1, 'little')
+			db_entry['lineup'].append("{:04X}".format(int.from_bytes(pl_id, 'big')))
+		init_setpiece = tmmng.tell()
+		db_entry['set_piece'] = []
+		for e in range(1,10):
+			if e % 2 == 0:
+				pl_bytes = tmmng.read(2)
+				pl_id = pl_bytes[0].to_bytes(1, 'little') + (pl_bytes[1]&63).to_bytes(1, 'little')
+			else:
+				tmmng.seek(-1,1)
+				pl_bytes = tmmng.read(3)
+				pl_id = (((pl_bytes[1] & 63) << 2) + ((pl_bytes[0]&192) >>6)).to_bytes(1, 'little') + (((pl_bytes[2]
+				& 15)  << 2) + ((pl_bytes[1] & 192) >> 6)).to_bytes(1, 'little')
+			db_entry['set_piece'].append("{:04X}".format(int.from_bytes(pl_id, 'big')))
+		tmmng.seek(init_players+4,0)
+		for e in range(9):
+			tmmng.seek(3,1)
+			db_entry['aggression'][e+1] = (tmmng.read(1)[0] & 240) >> 4
+		if t_verbose:
+			for i in range(11):
+				print(players_db.get(db_entry['lineup'][i], {}).get('name','?'), db_entry['aggression'][i], db_entry['attack'][i],db_entry['positions'][i].to_bytes(2,'big'))
+			for i in range(9):
+				print(setpiece[i], players_db.get(db_entry['set_piece'][i], {}).get('name','?'),sep='\t')
+	os.chdir(currdir)
+
+def initialize(*db):
+	global debug
+	if db: debug = True
 	def start_search():
-		global sf
+		global sf, tableSort
 		a = input('Player name (hit return to cancel): ')
 		if len(a) == 0: return 'n'
+		if table:
+			llist = sorted(list(fieldopedia.keys()))
+			lval = [fieldopedia[_]['short'] for _ in sorted(fieldopedia)]
+			tableSort = lval[int(fc) if (fc:=inputPlus('\n$OPTIONLIST_d$', lval:={x:y for x,y in enumerate(lval)}, dct=llist, c=True, sep="@grid", cancelNull=True, additional_message="Sort table by (default = Name)")[0]).isnumeric() else 19]
+		b = None
+		if ';' in a or '|':
+			b = a.split(';')[1:]
+			a = a.split(';')[0]
 		if a[0] == '@':
 			command = a.split('@')[1]
 			a = a.split('@')[2]
@@ -3535,7 +4149,7 @@ def initialize():
 			command = 'search_name'
 		if command == 'team': command = 'search_team'
 		os.system(clear_screen)
-		search = search_players(unidecode.unidecode(a), command)
+		search = search_players(unidecode.unidecode(a), command, refine=b)
 		results = search['results']
 		if len(results) == 0:
 			if not table: print('No matches')
@@ -3546,6 +4160,7 @@ def initialize():
 				toEdit = list(search['files'])[0]
 				name = results[0]['name']
 			elif len(results) > 1 or table or debug:
+				results = sorted(results, key=lambda x:x['name'])
 				action = 'Select' if not table else 'Edit'
 				while True:
 					view = input(f'{action} player:\n\n  %s\n  ----------\n  [c]ancel: '%('\n  '.join(['[%s]: %s (%s, %s)'%(i,x['name'],x['index_fcdb'],x['team']) for i,x in enumerate(results)])))
@@ -3575,8 +4190,6 @@ def initialize():
 def inputPlus(message, valid_options, **params):
 	dct = valid_options
 	n_vals = len(valid_options)
-	idx = ''
-	field = ''
 	separator = ', '
 	delimiter = None
 	valid_params = None
@@ -3587,18 +4200,35 @@ def inputPlus(message, valid_options, **params):
 		delimiter = params.get('dlt',None)
 		valid_params = params.get('par',None)
 		dct = params.get('dct', dct)
-		if (i:= params.get('idx', None)): idx = '[%s]'%i
-		if (i:= params.get('field', None)): field = '%s'%i
 		c = params.get('c', False)
 		entC = params.get('entC', False)
 	c_separator = '{0}{1}{0}'.format(separator, 11*'━') if '\n' in separator else separator
-	if '$OPTIONLIST_d$' in message: message = message.replace('$OPTIONLIST_d$', separator.join(['[%s] %s'%(e,dct[e]) for e in valid_options.keys()]))
-	elif '$OPTIONLIST_l$' in message: message = message.replace('$OPTIONLIST_l$', eval("separator.join(['[%s] %s'%(e,o"+idx+field+") for (e,o) in enumerate(valid_options)])"))
+	width, width_l, grid_sp = 0, 1, 0
+	msg = ''
+	if separator == '@grid':
+		width = max([len(_) for _ in dct]) if '$OPTIONLIST_d$' in message else max([len(_) for _ in valid_options])
+		width_l = len(str(len(dct))) if '$OPTIONLIST_d$' in message else len(str(len(valid_options)))
+		separator = ''
+		grid_sp = 4
+	if '$OPTIONLIST_d$' in message: msg = separator.join([f'[{e}] {dct[e]:{width+width_l-(len(str(e))-grid_sp)*(width>0)}}' for e in valid_options.keys()])
+	elif '$OPTIONLIST_l$' in message: msg = separator.join([f'[{e}] {o:{width+width_l-(len(str(e))-grid_sp)*(width>0)}}' for (e,o) in enumerate(valid_options)])
+	if width > 0:
+		winWidth = os.get_terminal_size().columns-2
+		itemWidth = width+width_l+3+grid_sp
+		perLine = winWidth // itemWidth
+		totLines = math.ceil(n_vals / perLine)
+		msgbits = []
+		for _ in range(totLines):
+			msgbits.append((fl:=msg[_*itemWidth*perLine:(_+1)*perLine*itemWidth])+' '*(itemWidth*perLine-len(fl)))
+			fl=msg[_*itemWidth*perLine:(_+1)*perLine*itemWidth]
+		msg = '┌'+'─'*(perLine*itemWidth)+'┐\n│'+'│\n│'.join(msgbits)+'│\n└'+'─'*(perLine*itemWidth)+'┘\n'
+
+	message = message.replace('$OPTIONLIST_d$', msg).replace('$OPTIONLIST_l$', msg)
 	valid_options = [str(_) for _ in list(valid_options.keys())] if type(valid_options) == dict else [str(_) for _ in range(n_vals)]
 	if c: message = message.replace('$CANCEL$', '%s[%s] cancel'%(c_separator,n_vals)); valid_options += [str(n_vals)]
 	if entC == True: valid_options += ['']
 	while True:
-		option = input('%s:\033[J '%message)
+		option = input(f'{message}{(" "+(addm:=params.get("additional_message", "")))*(len(addm)>0)}:\033[J ')
 		param = None
 		if delimiter and delimiter in option:
 			option = (args:=option.split(delimiter))[0]
@@ -3608,6 +4238,9 @@ def inputPlus(message, valid_options, **params):
 				if param in valid_params: break
 				else: continue
 			if option == '': option = len(valid_options)-1
+			break
+		if option == '' and params.get('cancelNull',None):
+			option = ''
 			break
 		print('\033[%sA'%(2+message.count('\n')))
 		if params.get('top',False): os.system(clear_screen)
@@ -3629,7 +4262,7 @@ def ch_game_path(**kwargs):
 	else: return pth
 
 def ch_lang(**kwargs):
-	global f_nomi, f_valori, f_squadre, f_interfaccia, filenames
+	global f_nomi, f_valori, f_squadre, f_interfaccia, filenames, lang
 	os.system(clear_screen)
 	lval = ['DUT','ENG','FRE','GER','ITA','SPA','SWE']
 	llist = ['Dutch','English','French','German','Italian','Spanish','Swedish']
@@ -3649,6 +4282,7 @@ def ch_lang(**kwargs):
 			json.dump(custom_vals, open('fifa_config.json', 'w'), indent=2)
 			break
 	print('New game language: %s'%llist[nf])
+	lang = lval[nf]
 	if not kwargs.get('wait',False):
 		filenames = ["FCDBPENG.DBI","FCDB.DBI","FCDB_%s.DBI"%lval[nf],"FC%s.BIN"%lval[nf]]
 		f_nomi, f_valori, f_squadre, f_interfaccia = ["%s/%s"%(Fifapath,fn) for fn in filenames]
@@ -3657,69 +4291,88 @@ def ch_lang(**kwargs):
 
 def show_all_kits(*args):
 	if os.path.isdir(os.path.join(gamepath.replace('common','ingame'),'PLAYER','TEXTURES','PLYRKITS')):
-		while True:
-			if len(args) > 0:
-				wh = args[0]
-				break
-			try:
-				wh = {'h':'first','a':'second','c':'c'}[input('\r\033[KShow [h]ome or [a]way jerseys ([c]ancel)? ')]
-				if wh == 'c': return
-				break
-			except:
-				pass
+		wh = 'first'
 		print('\033[1A\033[KLoading jerseys...')
 		jerseys = [_ for _ in os.listdir(os.path.join(gamepath.replace('common','ingame'),'PLAYER','TEXTURES','PLYRKITS')) if re.match('jers\d\d.fsh',_.lower())]
-		root = tk.Tk()
-		root.title('Select jersey')
-		root.geometry("800x600+0+0")
-		#Code from Codemy
-		# Create A Main Frame
-		main_frame = Frame(root)
-		main_frame.pack(fill="both", expand=1)
-
-		# Create A Canvas
-		my_canvas = tk.Canvas(main_frame)
-		my_canvas.pack(side="left", fill="both", expand=1)
-
-		# Add A Scrollbar To The Canvas
-		my_scrollbar = Scrollbar(main_frame, orient="vertical", command=my_canvas.yview)
-		my_scrollbar.pack(side="right", fill="y")
-
-		# Configure The Canvas
-		my_canvas.configure(yscrollcommand=my_scrollbar.set)
-		my_canvas.bind('<Configure>', lambda e: my_canvas.configure(scrollregion = my_canvas.bbox("all")))
-
-		# Create ANOTHER Frame INSIDE the Canvas
-		second_frame = Frame(my_canvas)
-
-		# Add that New frame To a Window In The Canvas
-		my_canvas.create_window((0,0), window=second_frame, anchor="nw")
-		images = []
-		def callback(n,h):
+		mainRoot = tk.Tk()
+		mainRoot.title('Select jersey')
+		mainRoot.geometry("726x580+300+0")
+		mainRoot.configure(background='#EAEAEA')
+		queue = {}
+		def callback(n,h,tm):
 			n = int(n['text'])
+			e = n
 			n = sorted(teams, key=lambda x: x['names'][-1])[n]
-			root.destroy()
-			if platform.system() == 'Darwin': os.system('''/usr/bin/osascript -e 'tell app "Finder" to set frontmost of process "Terminal" to true' ''')
-			edit_team(n,field='fs' if wh == 'first' else 'ss')
-			load_database()
+			f = edit_team(n,field='fs' if wh == 'first' else 'ss',asChild=mainRoot,buttons = buttons[e%6])
+			queue.setdefault(n['id'],{}).setdefault(f.args[2][1], []).append(f)
 			print('\033[2A\033[J')
-			show_all_kits(h)
 		def on_closing(event):
-			if event.widget == root:
+			if event.widget == mainRoot:
 				if platform.system() == 'Darwin': os.system('''/usr/bin/osascript -e 'tell app "Finder" to set frontmost of process "Terminal" to true' ''')
-		root.bind("<Destroy>", on_closing)
-		for e,t in enumerate(sorted(teams, key=lambda x: x['names'][-1])):
-			j = t['first shirt']
-			k = showJersey(j,'front',t[f'{wh} shorts'],t[f'{wh} socks'],t[f'{wh} shirt - colour 1'],t[f'{wh} shirt - colour 2'],t[f'{wh} shirt - colour 3'],t[f'{wh} shorts - colour 1'],t[f'{wh} shorts - colour 2'],t[f'{wh} socks - colour 1'],t[f'{wh} socks - colour 2'])
-			n = t['names'][-1]
-			images.append(ImageTk.PhotoImage(k))
-			kd = tk.Button(second_frame, text = e, image = images[-1])
-			kn = Label(second_frame,text=n)
-			kd['command'] = lambda b=kd: callback(b,wh)
-			kd.grid(row=int(e*2/6)*2, column=e%3, padx=10, pady=10)
-			kn.grid(row=int(e*2/6)*2+1, column=e%3, padx=10, pady=0)
-		root.attributes("-topmost", True)
-		root.mainloop()
+		mainRoot.bind("<Destroy>", on_closing)
+		buttons = {}
+		visibleButtons = []
+		
+		startTeam = 0
+		
+		for e in range(6):
+			kd = tk.Button(mainRoot)
+			kn = Label(mainRoot)
+			visibleButtons.append({'label':kn,'button':kd})
+		
+		def _move(evt):
+			direction = int(w.get())*6
+			nonlocal fired, startTeam
+			fired = False
+			startTeam = direction
+			_updateButtons(False)
+			if startTeam == int(len(teams) / 6) *6:
+				for e in range(len(teams)-1,(int(len(teams)/6)+1)*6):
+					visibleButtons[e % 6]['button'].grid_forget()
+					visibleButtons[e % 6]['label'].grid_forget()
+		
+		def _swopHA():
+			nonlocal wh, fired
+			fired = False
+			z.config(text = 'Away' if wh == 'first' else 'Home')
+			wh = 'second' if wh == 'first' else 'first'
+			_updateButtons(False)
+			
+		fired = False
+		def _updateButtons(event):
+			nonlocal fired
+			if fired: return
+			fired = True
+			for e,t in enumerate(sorted(teams, key=lambda x: x['names'][-1])):
+				if e < startTeam-1: continue
+				if e == startTeam + 6: break
+				j = t[f'{wh} shirt']
+				k = showJersey(j,'front',t[f'{wh} shorts'],t[f'{wh} socks'],t[f'{wh} shirt - colour 1'],t[f'{wh} shirt - colour 2'],t[f'{wh} shirt - colour 3'],t[f'{wh} shorts - colour 1'],t[f'{wh} shorts - colour 2'],t[f'{wh} socks - colour 1'],t[f'{wh} socks - colour 2'])
+				n = t['names'][-1]
+				jersey = ImageTk.PhotoImage(image = k)
+				visibleButtons[e % 6]['button'].config(text = e, image = jersey)
+				visibleButtons[e % 6]['button'].image = jersey
+				visibleButtons[e % 6]['button']['command'] = lambda b=visibleButtons[e % 6]['button']: callback(b,wh,t)
+				visibleButtons[e % 6]['label']['text'] = n
+				buttons[e % 6] = visibleButtons[e % 6]['button']
+				visibleButtons[e % 6]['button'].grid(row=int((e%6)*2/6)*2, column=(e%6)%3, padx=10, pady=10)
+				visibleButtons[e % 6]['label'].grid(row=int((e%6)*2/6)*2+1, column=(e%6)%3, padx=10, pady=0)
+			
+		w = Scale(mainRoot, from_=0, to=int(len(teams)/6), orient="horizontal", length="500")
+		w.bind("<ButtonRelease-1>", lambda x: _move(x))
+		w.place(x=113,y=540)
+		
+		z = tk.Button(mainRoot, text='Home', command=_swopHA)
+		z.place(x=650,y=540)
+		
+		mainRoot.bind('<Visibility>', _updateButtons)
+		mainRoot.attributes("-topmost", True)
+		mainRoot.mainloop()
+	
+		valori = open(f_valori, 'r+b')
+		for tid, ql in queue.items():
+			for ha, q in ql.items():
+				q[0]()
 
 def main_menu():
 	os.system(clear_screen)
@@ -3740,10 +4393,11 @@ def main_menu():
 		('List all players','os.system(clear_screen);general_list()'),
 		('List all players by role','list_by_role()'),
 		('Export database as JSON file','export_database()'),
-		('Debug mode','os.system(clear_screen);global table, debug; print("#### Debug mode ####\\n"); debug = True; table=False; load_database(); initialize()'),
+		('Debug mode','os.system(clear_screen);global table, debug; print("#### Debug mode ####\\n"); debug = True; table=False; load_database(); initialize(True)'),
 		('Select game folder','ch_game_path()'),
 		('Select language','ch_lang()'),
 		('Save to game','commit()'),
+		('Reload tmmng.db','read_tmmng(refresh=True)'),
 		('Restore previous database version','restore()'),
 		('Exit','sys.exit()')
 	]
@@ -3793,12 +4447,21 @@ Commands:
 [e] opens the editing window.
 
 Leagues can be edited ([e]) in the following ways:
-- they can be renamed
-- they can exchange teams
+- They can be renamed.
+- They can exchange teams.
 - their size of leagues can be expanded or reduced to any size between 2 and 30. WARNING:
-  CHANGING LEAGUE SIZES MAKES THEM UNPLAYABLE AS LEAGUES IN THE GAME. Teams can be used in friendlies etc. 
+  CHANGING LEAGUE SIZES MAKES THEM UNPLAYABLE AS LEAGUES IN THE GAME. Teams can be used in 
+  friendlies etc. 
   Expansion is only possible if there are league-less teams to be added; reduction releases
   teams from the league.
+- League teams can replace national teams. Doing so requires adding a flag for the team to
+  the game graphics. One can select any flag from the national team ones. This operation
+  requires decompressing/compressing the EA graphics files, for which the MS-DOS utility 
+  RefPack Tool is needed (https://github.com/MicaelJarniac/RefPack-Tool), and can only be
+  performed on a Windows/PC machine. The replaced national team is not removed from the 
+  database and can be restored in place using the same procedure. Alternatively, each nat-
+  ional team group may be restored to its original components with the command 'restore o-
+  riginal' ([o]).
 
 """,
 """
@@ -3807,7 +4470,8 @@ Leagues can be edited ([e]) in the following ways:
 Search for a team by its name. If more than one team is found, each team is displayed se-
 quentially. The command [n] moves on to the next team, while [c]ancel returns to the main
 menu. The command [e] lets the user edit the team. [k] shows a rendering of the team's ho-
-me and away kits in a new window. [s] loads the list of all players in the team from which
+me and away kits in a new window. [r] resets the edits to the team done in Team Management
+in the game and stored in tmmng.db. [s] loads the list of all players in the team from which
 data for each player can be accessed (displayed as in FORM VIEW). When a player's file is
 loaded, [r] returns to the team file, while [s] reloads the list of players and [c] returns
 to the main menu.
@@ -3830,17 +4494,28 @@ balanced roster to play with the currently active tactics.
 
 Notes on editing commands:
 
-- [fs] --> first kit shirt, [fsc] --> first kit shirt colours, [fh] --> first kit shorts,
-  [fhc] --> first kit shorts colour, etc.
+- [fk] --> first kit, [sk] --> second kit
+- forma[t]ion: custom formations may be added in the same way as in Team Management. Three
+  divisions may be selected (defense, midfield, attack) with min. 2 and max. 5 players each.
+  Custom lineups are stored in tmmng.db in the USER folder (unlike the standard ones, which
+  are stored in the database files in the COMMON folder).
 - [l]ineup (for clubs only): select the starting eleven, role by role, for the current tac-
   tics, as required by the game algorithm. The lineup will be applied if team management
   is reset in the game. Selectable players are listed for each role, together with their
   skill average. Lineups of national teams may not be edited (due to potential conflicts
   with the status of players in clubs) and should be adjusted in the game.
+  If a custom formation is selected, any player may be selected for any position (like in
+  Team Management). If this is the case, lineups are stored in tmmng.db in the USER folder
+  (not in the database files in the COMMON folder).
 - s[e]t piece taker: selects the player (from the starting eleven) that should have the
   highest 'Shot Power' score and that the game will automatically pick as the free kick
   and penalty taker. NB: it might be necessary to select the starting lineup in the editor
   before selecting the set piece taker.
+  If 'Select a piece taker for each set piece' is chosen, it will be possible to select
+  takers for each set piece like in Team Management from the starting lineup. CKL = left
+  corner kick, CKR = right corner kick, FK = free kick, PK = penalty kick, PK1–5 = penalty
+  kicks in knockout games. Custom set piece takers are stored in tmmng.db in the USER folder
+  (not in the database files in the COMMON folder).
 - [p]layers: loads all players in TABLE VIEW for further editing.
 - [rel]ease player (clubs only): remove players from team roster and add to free agents.
 - [c]all players (national teams only): select players from the players of the correct na-
@@ -3922,44 +4597,31 @@ When editing the role of a player, it will be possible to select roles that are 
 in the in-game editor: LCB, RCB, LCM, RCM. These roles specify if a player must be the left
 or right centre back if team tactics have an odd number of defenders (3-5-2, 5-3-2, 3-4-3,
 5-4-1). LCM and RCM do the same job for tactics where midfielders are in odd number (4-3-3,
-5-3-2, 3-5-2). For 5-3-2 and 5-4-1, CB (not SW!) selects the sweeper.
+5-3-2, 3-5-2). For 3-5-2, 5-3-2 and 5-4-1, CB (not SW!) selects the sweeper.
 NB: These roles only apply to players in the starting lineup.
 
 ""","""
 \033[23C------ SEARCH/EDIT PLAYERS, TABLE VIEW ------
 
-Same as search/edit players, FORM VIEW, but player values are displayed as a table, with a
-row for each player. This option is recommended if comparing players or editing more than
-one player at a time and is default when players are edited in team editing mode.
+Search players by name, with player values are displayed as a table, with a row for each
+player. This option is recommended if comparing players or editing more than one player at
+a time and is default when players are edited in team editing mode. To search for multiple
+names, separate them with a slash (e.g. Name1/Name2). It is also possible to search other
+fields than the name. Field names must be enclosed in a pair of @ signs and the searched
+value must follow immediately (e.g. @field@value).
 
-Fields:
+The following fields can be searched: country, jersey, role, team, international, speed,
+acceleration, agility, aggression, attack bias, ball, awareness, fitness, creativity,
+passing, passing bias, heading, reaction, tackle, shot bias, shot power, shot accuracy,
+average. 'International' selects players in the squad of the desired national team (e.g.
+@international@Spain).
 
- H	hair type (hex digit)
- HC	hair colour (colour)
- SC	skin colour (colour)
- F	face type (digit)
- B	facial hair
- $$$	price
- Jers	jersey number
- Aggr	aggression
- Accl	acceleration
- AttB	attack bias
- Agil	agility
- Ball	ball control
- Awar	awareness
- Fitn	fitness
- Crea	creativity
- Reac	reaction
- PBia	passing bias
- SPow	shot power
- SBia	shot bias
- Spee	speed
- SAcc	shot accuracy
- Tack	tackle
- AV		average
- InFPE	index in name database
- InFCDB	index in skill database
- Team	club team (if any)
+Multiple fields can be searched and must be separated by a semicolon (e.g. @speed@91;@role@CB).
+The following comparison operators can be used for numeric fields: >, >=, <, <= (e.g.
+@speed@>91).
+
+The table can be sorted by each field (default is by name); the user will be prompted to
+select one after entering the value to be searched.
 
 In the final row, a count of nations represented in the table is provided in the Nation
 column. Other columns show the average for the respective field. If the Jersey column has
@@ -3993,10 +4655,18 @@ when buying a player (in SEARCH/EDIT TEAMS) or will be callable to a national te
 ""","""
 \033[27C------ ADD TEAM TO DATABASE ------
 
-Creates a new player and loads it up for editing. New teams will be available for adding to
+Creates a new team and loads it up for editing. New teams will be available for adding to
 leagues if leagues are expanded or in exchange for an existing team, which will be released
 from the league. New teams are empty and can be populated by buying players from existing
 teams or by adding free-agent players (new players, players of national teams).
+If the team is a National Team, the user is prompted to add a flag (the path to a PNG or
+BMP file should be provided).
+This operation requires decompressing/compressing the EA graphics files, for which the 
+MS-DOS utility RefPack Tool is needed (https://github.com/MicaelJarniac/RefPack-Tool), and 
+can only be performed on a Windows/PC machine.
+Once it is created, the new national team may be added to a national team group by swopping
+it with an existing one (see SHOW/EDIT LEAGUES). The new nationality may be selected for
+players to be callable into the national team.
 
 ""","""
 \033[34C---- DUPLICATE TEAM ----
@@ -4074,6 +4744,10 @@ Save the changes made in the editor to the game database files. If changes are n
 game, they will only be stored in the files the editor works on.
 
 ""","""
+\033[22C------ RELOAD TMMNG.DB ------
+
+Load or reload the changes made in the game using Team Management into the editor.
+""","""
 \033[22C------ RESTORE PREVIOUS DATABASE VERSION ------
 
 Discard all unsaved changes and restore the database currently used in the game.
@@ -4097,13 +4771,40 @@ if platform.system() == 'Darwin':
 	print("\x1b[8;46;201t", end = '')
 
 #load settings
-custom_vals = json.loads(open('fifa_config.json', 'r').read())
+custom_vals = json.loads(open(f'{os.getcwd()}/fifa_config.json', 'r').read())
 for custom_field in custom_vals.keys():
 	exec('{0} = a if len(a:=custom_vals["{0}"]) == len({0}) else {0}'.format(custom_field))
 
 		
 gamepath = gamepath[0]
 lang = lang[0]
+
+def bank(s):
+	if lang == 'ENG': return s
+	if lang == 'GER': return round(s*2.8335)*1000
+	if lang == 'ITA': return round(s*2.7813)
+	if lang == 'DUT': return round(s*10.7866)*1000
+	if lang == 'ESP': return round(s*239.3311)
+	if lang == 'FRE': return round(s*9.5554)
+	if lang == 'SWE': return round(s*12.725)
+
+def unbank(s):
+	if lang == 'ENG': return s
+	if lang == 'GER': return round(round(s/1000)/2.8335)
+	if lang == 'ITA': return round(s/2.7813)
+	if lang == 'DUT': return round(round(s/1000)/10.7866)
+	if lang == 'ESP': return round(s/239.3311)
+	if lang == 'FRE': return round(s/9.5554)
+	if lang == 'SWE': return round(s/12.725)
+
+def _fgRoles(role,starting): #fresh
+	if starting == 196:
+		if role == 'CB': return 'LCB'
+		elif role == 'CM': return 'LCM'
+	elif starting == 195:
+		if role == 'CB': return 'RCB'
+		elif role == 'CM': return 'RCM'
+	else: return role
 		
 gamepath = ch_game_path(wait=True) if gamepath == '' else gamepath
 if not gamepath: sys.exit()
@@ -4134,6 +4835,6 @@ else:
 	except:
 		print('The database files are corrupt. Restoring from last saved version.')
 		restore()
-
+read_tmmng()
 from display_jerseys import *
 main_menu()
