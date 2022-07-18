@@ -475,6 +475,20 @@ fieldopedia = {
 
 field_order = ['Name','ID','Nation','Hair Type','Hair Colour','Skin Colour','Face','Beard','Price','Jersey','Role','Aggression','Acceleration','Attack Bias','Agility','Ball Control','Awareness','Fitness','Creativity','Passing','Heading','Reaction','Pass Bias','Shot Power','Shot Bias','Speed','Shot Accuracy','Tackle','Average','Index FCDBPENG','Index FCDB','Team','International']
 
+leagueNations = [
+	'0069',
+	'0047',
+	'0059',
+	'0071',
+	'0038',
+	'0054',
+	'0815',
+	'0641',
+	'0072',
+	'0035',
+	'0039'
+]
+
 skill_fields = field_order[11:28]
 ai_fields =[x-11 for x in [11,13,22,24]]
 
@@ -3843,12 +3857,13 @@ def feflags(*spTeam,**kwargs):
 			t_fsh = f'{t["id"]:0>4}'
 			t_fsh_data = [f for f in feflags_parts[1:] if f['name'] == t_fsh]
 			if len(t_fsh_data) == 0: continue
-			tmn_flags[t['names'][-1]] = dict(t_fsh_data[0])
+			tmn_flags[t_fsh] = dict(t_fsh_data[0])
 		for t in teams:
 			if t['league_id'] >= 11: continue
 			if spTeam and spTeam[0] != t['id']: continue
 			t_fsh = f'{t["id"]:0>4}'
-			t_fsh_data = dict(tmn_flags.get(t_nation,tmn_flags['USA']))
+			t_nation = leagueNations[t['league_id']]
+			t_fsh_data = dict(tmn_flags[t_nation])
 			t_fsh_data['image'] = t_fsh_data['image'].replace(t_fsh_data['name'].encode('ascii'),t_fsh.encode('ascii'))
 			shutil.copyfile('/'.join([gamepath.replace('common','fepack'),'IGFLAGS',f'{t_fsh_data["name"]}.pak']), '/'.join([gamepath.replace('common','fepack'),'IGFLAGS',f'{t_fsh}.pak']))
 			bigFlagFile = open('/'.join([gamepath.replace('common','fepack'),'IGFLAGS',f'{t_fsh}.pak']),'rb')
