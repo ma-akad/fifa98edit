@@ -334,7 +334,7 @@ jerseys = [
                 ░░░░░░░░░
 """
 ]
-
+os.chdir(os.path.dirname(os.path.realpath(__file__)))
 custom_vals = json.loads(open('fifa_config.json', 'r').read())
 gamepath = custom_vals['gamepath'][0]
 
