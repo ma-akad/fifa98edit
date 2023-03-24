@@ -2466,27 +2466,27 @@ Parameter to edit:
 			pitch_pos = {
 				'GK': (3,24),
 				'SW': (9,24),
-				'RB': (15,34),
-				'RCB': (12,26),
+				'RB': (15,39),
+				'RCB': (12,32),
 				'CB': (15,24),
 				'LCB': (12,16),
 				'LB': (15,9),
-				'RM': (28,34) if 'd' in ttmng['formation'][2] else (26,34),
-				'RCM': (21,26) if 'd' in ttmng['formation'][2] else (23,26),
+				'RM': (28,39) if 'd' in ttmng['formation'][2] else (26,39),
+				'RCM': (21,32) if 'd' in ttmng['formation'][2] else (23,32),
 				'CM': (28,24) if 'd' in ttmng['formation'][2] else (26,24),
 				'LCM': (21,16) if 'd' in ttmng['formation'][2] else (23,16),
 				'LM': (28,9) if 'd' in ttmng['formation'][2] else (26, 9),
-				'RCF': (30,24) if ttmng['formation'][2] == '2d' else (33,26),
+				'RCF': (30,24) if ttmng['formation'][2] == '2d' else (33,32),
 				'CF': (30,24) if 'd' in ttmng['formation'][2] else (35,24),
 				'LCF': (35,24) if ttmng['formation'][2] == '2d' else (33,16)
 			}
 			current = positions[1]
 			while True:
 				pitch = [[]]
-				pitch.append(['\033[48;5;15m   ']*43+['\033[0m'])
-				for i in range(39):
-					pitch.append(['\033[48;5;15m   ']+['\033[48;5;22m   ']*20+[' \033[48;5;15m \033[48;5;22m ']+['\033[48;5;22m   ']*20+['\033[48;5;15m   ']+['\033[0m'])
-				pitch.append(['\033[48;5;15m   ']*43+['\033[0m'])
+				pitch.append(['\033[48;5;15m   ']*55+['\033[0m'])
+				for i in range(47):
+					pitch.append(['\033[48;5;15m   ']+['\033[48;5;22m   ']*26+[' \033[48;5;15m \033[48;5;22m ']+['\033[48;5;22m   ']*26+['\033[48;5;15m   ']+['\033[0m'])
+				pitch.append(['\033[48;5;15m   ']*55+['\033[0m'])
 				for pos,alter in positions:
 					coordinates = pitch_pos[pos]
 					latitude = coordinates[1] + alter[1] - 8
@@ -2520,7 +2520,7 @@ Parameter to edit:
 					current[1][1] = max(current[1][1]-1,0)
 				if k == 'down':
 					current[1][1] = min(current[1][1]+1,15)
-				print('\033[44A')
+				print('\033[52A')
 			new_positions = [p[1] for p in positions]
 			if input('\033[2KSave changes? ') == 'y':
 				_refresh_tmmng(vals_already,'positions',new_positions)
@@ -4977,7 +4977,7 @@ os.system(clear_screen)
 if platform.system() == 'Darwin':
 	os.system('''/usr/bin/osascript -e 'tell app "System Events" to keystroke "0" using command down' ''')
 	os.system('''/usr/bin/osascript -e 'tell app "System Events" to keystroke "-" using command down' ''')
-	print("\x1b[8;46;201t", end = '')
+	print("\x1b[8;53;201t", end = '')
 
 #load settings		
 gamepath = gamepath[0]
@@ -4993,6 +4993,13 @@ for f in os.listdir(j_dir:=os.path.join(gamepath.replace('common','ingame'),'PLA
 		jersey_types[(jt:=int(f[4:6]))-1] = jname if (jname:=fsh.read().split(b'\x00')[0].decode('utf-8')) else f
 lang = ch_lang(wait=True) if lang == '' else lang
 if not lang: sys.exit()
+
+try:
+	heads = open(os.path.join(gamepath.replace('common','ingame'),'PLAYER','TEXTURES','COMMON','HIHEAD.FSH'), 'rb')
+	heads.seek(74,0)
+	if heads.read(2).decode('ascii') == '07': WorldCupFaces = True
+except:
+	pass
 
 filenames = ["FCDBPENG.DBI","FCDB.DBI","FCDB_%s.DBI"%lang,"FC%s.BIN"%lang]
 
